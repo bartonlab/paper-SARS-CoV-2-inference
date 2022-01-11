@@ -1,0 +1,16 @@
+% This file specifies the filenames of the Header Updated FASTA files.
+% the syntax is:
+% filename1.ext
+%
+% Note: do not place a comma or semicolon at the end of filename
+% -------------------------------------------------------------------------
+MC1_synth_bsample1of1_t1_HU.fasta
+MC1_synth_bsample1of1_t2_HU.fasta
+MC1_synth_bsample1of1_t3_HU.fasta
+MC1_synth_bsample1of1_t4_HU.fasta
+MC1_synth_bsample1of1_t5_HU.fasta
+MC1_synth_bsample1of1_t6_HU.fasta
+MC1_synth_bsample1of1_t7_HU.fasta
+MC1_synth_bsample1of1_t8_HU.fasta
+MC1_synth_bsample1of1_t9_HU.fasta
+MC1_synth_bsample1of1_t10_HU.fasta

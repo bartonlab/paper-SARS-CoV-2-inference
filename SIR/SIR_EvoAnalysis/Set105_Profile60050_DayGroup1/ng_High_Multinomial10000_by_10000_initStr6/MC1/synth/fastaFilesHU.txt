@@ -1,0 +1,56 @@
+% This file specifies the filenames of the Header Updated FASTA files.
+% the syntax is:
+% filename1.ext
+%
+% Note: do not place a comma or semicolon at the end of filename
+% -------------------------------------------------------------------------
+MC1_synth_bsample1of1_t1_HU.fasta
+MC1_synth_bsample1of1_t2_HU.fasta
+MC1_synth_bsample1of1_t3_HU.fasta
+MC1_synth_bsample1of1_t4_HU.fasta
+MC1_synth_bsample1of1_t5_HU.fasta
+MC1_synth_bsample1of1_t6_HU.fasta
+MC1_synth_bsample1of1_t7_HU.fasta
+MC1_synth_bsample1of1_t8_HU.fasta
+MC1_synth_bsample1of1_t9_HU.fasta
+MC1_synth_bsample1of1_t10_HU.fasta
+MC1_synth_bsample1of1_t11_HU.fasta
+MC1_synth_bsample1of1_t12_HU.fasta
+MC1_synth_bsample1of1_t13_HU.fasta
+MC1_synth_bsample1of1_t14_HU.fasta
+MC1_synth_bsample1of1_t15_HU.fasta
+MC1_synth_bsample1of1_t16_HU.fasta
+MC1_synth_bsample1of1_t17_HU.fasta
+MC1_synth_bsample1of1_t18_HU.fasta
+MC1_synth_bsample1of1_t19_HU.fasta
+MC1_synth_bsample1of1_t20_HU.fasta
+MC1_synth_bsample1of1_t21_HU.fasta
+MC1_synth_bsample1of1_t22_HU.fasta
+MC1_synth_bsample1of1_t23_HU.fasta
+MC1_synth_bsample1of1_t24_HU.fasta
+MC1_synth_bsample1of1_t25_HU.fasta
+MC1_synth_bsample1of1_t26_HU.fasta
+MC1_synth_bsample1of1_t27_HU.fasta
+MC1_synth_bsample1of1_t28_HU.fasta
+MC1_synth_bsample1of1_t29_HU.fasta
+MC1_synth_bsample1of1_t30_HU.fasta
+MC1_synth_bsample1of1_t31_HU.fasta
+MC1_synth_bsample1of1_t32_HU.fasta
+MC1_synth_bsample1of1_t33_HU.fasta
+MC1_synth_bsample1of1_t34_HU.fasta
+MC1_synth_bsample1of1_t35_HU.fasta
+MC1_synth_bsample1of1_t36_HU.fasta
+MC1_synth_bsample1of1_t37_HU.fasta
+MC1_synth_bsample1of1_t38_HU.fasta
+MC1_synth_bsample1of1_t39_HU.fasta
+MC1_synth_bsample1of1_t40_HU.fasta
+MC1_synth_bsample1of1_t41_HU.fasta
+MC1_synth_bsample1of1_t42_HU.fasta
+MC1_synth_bsample1of1_t43_HU.fasta
+MC1_synth_bsample1of1_t44_HU.fasta
+MC1_synth_bsample1of1_t45_HU.fasta
+MC1_synth_bsample1of1_t46_HU.fasta
+MC1_synth_bsample1of1_t47_HU.fasta
+MC1_synth_bsample1of1_t48_HU.fasta
+MC1_synth_bsample1of1_t49_HU.fasta
+MC1_synth_bsample1of1_t50_HU.fasta

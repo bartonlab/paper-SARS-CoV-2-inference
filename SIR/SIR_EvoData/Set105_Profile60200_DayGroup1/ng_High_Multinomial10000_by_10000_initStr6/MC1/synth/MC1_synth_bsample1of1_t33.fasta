@@ -1,0 +1,21 @@
+>reference_sequence, all zeros
+AAAAA
+
+>haplotype, days: 33, freq: 0.18021, reads: 3586,
+AAAAA
+
+>haplotype, days: 33, freq: 0.1677, reads: 3337,
+CAAAA
+
+>haplotype, days: 33, freq: 0.22182, reads: 4414,
+ACAAA
+
+>haplotype, days: 33, freq: 0.18021, reads: 3586,
+AAACA
+
+>haplotype, days: 33, freq: 0.18021, reads: 3586,
+AAAAC
+
+>haplotype, days: 33, freq: 0.06985, reads: 1390,
+AACAA
+

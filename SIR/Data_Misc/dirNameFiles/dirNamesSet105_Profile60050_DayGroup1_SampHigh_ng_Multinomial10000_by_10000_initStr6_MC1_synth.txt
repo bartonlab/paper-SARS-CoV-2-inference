@@ -1,0 +1,7 @@
+% This file specifies directory paths to Data, Analysis
+% the syntax is /dir1/dir2/dir3/ 
+% for windows based system, the code will automatically reformat the path
+%
+% -------------------------------------------------------------------------
+dirNameData=D:\New\SIR SARSCOV2 - New/SIR_EvoData/Set105_Profile60050_DayGroup1/ng_High_Multinomial10000_by_10000_initStr6/MC1\synth\
+dirAnalysisName=D:\New\SIR SARSCOV2 - New/SIR_EvoAnalysis/Set105_Profile60050_DayGroup1/ng_High_Multinomial10000_by_10000_initStr6/MC1\synth\

@@ -15,9 +15,10 @@ Brian Lee<sup>1</sup>, Muhammad Saqib Sohail<sup>2</sup>, Elizabeth Finney<sup>1
 
 # Contents
 
-1. __Simulations__: A notebook to generate and analyze simulation is given in `simulations.ipynb`, and the scripts for generating and analyzing simulations is given in the `simulation-scripts/` directory.
-2. __Data processing__: A notebook for processing and analyzing SARS-CoV-2 sequence data is given in `data-paper.ipynb`. Scripts for analyzing and processing the data are given in the `data_processing.py` module and the `processing-files/` directory. Due to the number of SARS-CoV-2 genomes, much of the data analysis is best run on a computer cluster. We have provided code for producing the necessary job files in the `data-paper.ipynb` notebook. The original sequence data and metadata can be downloaded from [GISAID](https://gisaid.org).
-3. __Figures__: A notebook for generating the figures found in the paper or the supplementary material is given in `figures.ipynb`. Modules for generating the figures in the paper are given in `figs.py` and `mplot.py`, while figures in the supplementary data can be produced using the `epi_figs.py` module.
+1. __Branching process simulations__: A notebook to generate and analyze simulation is given in `simulations.ipynb`, and the scripts for generating and analyzing simulations is given in the `simulation-scripts/` directory.
+2. __SIR simulations__: The folder `SIR` contains MATLAB files for running and analyzing two different multi-variant SIR simulations. This folder contains its own readme file with instructions on how to use the files.
+3. __Data processing__: A notebook for processing and analyzing SARS-CoV-2 sequence data is given in `data-paper.ipynb`. Scripts for analyzing and processing the data are given in the `data_processing.py` module and the `processing-files/` directory. Due to the number of SARS-CoV-2 genomes, much of the data analysis is best run on a computer cluster. We have provided code for producing the necessary job files in the `data-paper.ipynb` notebook. The original sequence data and metadata can be downloaded from [GISAID](https://gisaid.org).
+4. __Figures__: A notebook for generating the figures found in the paper or the supplementary material is given in `figures.ipynb`. Modules for generating the figures in the paper are given in `figs.py` and `mplot.py`, while figures in the supplementary data can be produced using the `epi_figs.py` module.
 
 ### Software dependencies
 
