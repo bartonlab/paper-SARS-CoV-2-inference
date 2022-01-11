@@ -13,6 +13,8 @@ Brian Lee<sup>1</sup>, Muhammad Saqib Sohail<sup>2</sup>, Elizabeth Finney<sup>1
 <sup>5</sup> Department of Microbiology and Immunology, University of Melbourne, at The Peter Doherty Institute for Infection and Immunity  
 <sup>#</sup> correspondence to [john.barton@ucr.edu](mailto:john.barton@ucr.edu)  
 
+The preprint is available at [https://www.medrxiv.org/content/10.1101/2021.12.31.21268591](https://www.medrxiv.org/content/10.1101/2021.12.31.21268591).
+
 # Contents
 
 1. __Branching process simulations__: A notebook to generate and analyze simulation is given in `simulations.ipynb`, and the scripts for generating and analyzing simulations is given in the `simulation-scripts/` directory.
