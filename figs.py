@@ -728,6 +728,10 @@ def plot_performance(sim_file, inf_file, replicate_file, pop_size, cutoff=0.01):
     yy = -4 + (3.5*legend_dy)
     mp.line(ax=ax[-1][-1], x=[[legend_x+legend_dx2, legend_x+legend_dx1]], y=[[yy, yy]], colors=[BKCOLOR], plotprops=dict(lw=SIZELINE, ls=':', clip_on=False), **pprops)
     ax[-1][-1].text(legend_x, yy, 'True selection\ncoefficient', ha='left', va='center', **DEF_LABELPROPS)
+    
+    yy = -4 + (5.5*legend_dy)
+    mp.line(ax=ax[-1][-1], x=[[legend_x+legend_dx2, legend_x+legend_dx1]], y=[[yy, yy]], colors=[BKCOLOR], plotprops=dict(lw=SIZELINE, ls='-', clip_on=False), **pprops)
+    ax[-1][-1].text(legend_x, yy, 'Mean of inferred\ncoefficients', ha='left', va='center', **DEF_LABELPROPS)
 
     ### bounding boxes
 
@@ -795,8 +799,10 @@ def plot_performance(sim_file, inf_file, replicate_file, pop_size, cutoff=0.01):
     colors     = [C_DEL, C_NEU, C_BEN]
     tags       = ['deleterious', 'neutral', 'beneficial']
     s_true_loc = [-s_value, 0, s_value]
+    s_est_loc  = [np.mean(negative), np.mean(zero), np.mean(positive)]
 
     dashlineprops = { 'lw' : SIZELINE * 2.0, 'ls' : ':', 'alpha' : 0.5 }
+    fulllineprops = { 'lw' : SIZELINE * 2.0, 'ls' : '-', 'alpha' : 0.5 }
     histprops = dict(histtype='bar', lw=SIZELINE/2, rwidth=0.8, ls='solid', alpha=0.7, edgecolor='none',
                      orientation='vertical')
     pprops = { 'xlim':        [-0.10, 0.10],
@@ -819,6 +825,7 @@ def plot_performance(sim_file, inf_file, replicate_file, pop_size, cutoff=0.01):
         tprops = dict(ha='left', va='center', family=FONTFAMILY, size=SIZELABEL, rotation=0, clip_on=False)
         #ax_hist.text(0.102, s_true_loc[i], r'$s_{%s}$' % (tags[i]), color=colors[i], **tprops)
         ax_hist.axvline(x=s_true_loc[i], color=colors[i], **dashlineprops)
+        ax_hist.axvline(x=s_est_loc[i],  color=colors[i], **fulllineprops)
         if i<len(tags)-1: mp.hist(             ax=ax_hist, x=x, colors=[colors[i]], **pprops)
         else:             mp.plot(type='hist', ax=ax_hist, x=x, colors=[colors[i]], **pprops)
 
@@ -1083,7 +1090,7 @@ def plot_variant_selection(variant_file, trajectory_file, variant_list=[], varia
         pprops['ylim'] = [ 0.5, 1.5]
         ydat           = [1]
         xdat           = [df_sel.iloc[idx].selection_coefficient]
-        xerr           = [df_sel.iloc[idx].error]
+        xerr           = [df_sel.iloc[idx].standard_deviation]
         if (i==n_vars-1):
             pprops['xticks']      = xticks
             pprops['xticklabels'] = xticklabels
@@ -1174,7 +1181,7 @@ def plot_a222v(trajectory_file, alpha_file, eu1_file, variant_id, selection_file
                'xticklabels': xticklabels,
                'ylim':        [-0.05,  1.05],
                'yticks':      [0, 1],
-               'ylabel':      'S:A22V frequency\nacross regions',
+               'ylabel':      'S:A222V frequency\nacross regions',
                'axoffset':    0.1,
                #'hide':        ['bottom'],
                'theme':       'open' }

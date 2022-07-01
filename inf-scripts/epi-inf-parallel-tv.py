@@ -150,16 +150,16 @@ def main(args):
     # Read in parameters from command line
     parser = argparse.ArgumentParser(description='Selection coefficients inference')
     parser.add_argument('-o',            type=str,    default='inferred-coefficients', help='output file')
-    parser.add_argument('-R',            type=float,  default=0,                       help='the basic reproduction number')
+    parser.add_argument('-R',            type=float,  default=2,                       help='the basic reproduction number')
     parser.add_argument('-k',            type=float,  default=0.1,                     help='parameter determining shape of distribution of new infected')
-    parser.add_argument('-q',            type=int,    default=5,                     help='number of mutant alleles per site')
+    parser.add_argument('-q',            type=int,    default=5,                       help='number of mutant alleles per site')
     parser.add_argument('--mu',          type=float,  default=1e-4,                    help='the mutation rate')
     parser.add_argument('--data',        type=str,    default=None,                    help='directory to .npz files containing the counts, sequences, times, and mutant_sites for different locations')
     parser.add_argument('--g1',          type=float,  default=1,                       help='regularization restricting the magnitude of the selection coefficients')
     parser.add_argument('--freq_cutoff', type=float,  default=0,                       help='if a mutant frequency never rises above this number, it will not be used for inference')
     parser.add_argument('--record',      type=int,    default=1,                       help='number of generations between samples')
     parser.add_argument('--timed',       type=int,    default=0,                       help='if 0, wont print any time information, if 1 will print some information')
-    parser.add_argument('--pop_size',    type=int,    default=0,                       help='the population size')
+    parser.add_argument('--pop_size',    type=int,    default=10000,                   help='the population size')
     parser.add_argument('--ss_pop_size', type=str,    default=None,                    help='.npy file containing the simulation specific population size')
     parser.add_argument('--ss_k',        type=str,    default=None,                    help='.npy file containing the simulation specific k')
     parser.add_argument('--ss_R',        type=str,    default=None,                    help='.npy file containing the simulation specific R')
@@ -184,6 +184,7 @@ def main(args):
     parser.add_argument('--delay',       type=int,    default=None,                    help='the delay between the newly infected individuals and the individuals that ')
     parser.add_argument('--start_time',  type=int,    default=0,                       help='the time relative to january 2021 at which to start the inference')
     parser.add_argument('--end_time',    type=int,    default=100000,                  help='the time relative to january 2021 at which to stop the inference')
+    parser.add_argument('--refFile',     type=str,    default='ref-index.csv',         help='the file containing the reference sequence indices and nucleotides')
     parser.add_argument('--mutation_on',    action='store_true', default=False,  help='whether or not to include mutational term in inference')
     parser.add_argument('--cutoff_on',      action='store_true', default=False,  help='whether or not to cutoff frequencies below freq_cutoff')
     parser.add_argument('--find_linked',    action='store_true', default=False,  help='whether or not to find the sites that are (almost) fully linked')
@@ -264,6 +265,7 @@ def main(args):
         status_name = f'tv-inference-status-{arg_list.start_time}.csv'
     else:
         status_name = f'tv-inference-status.csv'
+        
     print(os.getcwd())
     print(status_name)
     status_file = open(status_name, 'w')
@@ -276,7 +278,9 @@ def main(args):
         string    = '\t'.join(line)
         stat_file.write(string+'\n')
         stat_file.close()
-        print(string)                                                
+        print(string) 
+    
+    print2(f'outfile is {out_str}')
             
     if timed > 0:
         t_elimination = timer()
@@ -287,6 +291,7 @@ def main(args):
     if not os.path.exists(scratch_dir):
         os.mkdir(scratch_dir)
     allele_number     = []
+    ref_sites         = []
     mutant_sites_full = []
     dates             = []
     dates_full        = []
@@ -309,32 +314,49 @@ def main(args):
         if filename.find('___') == -1 and os.path.isfile(filepath):
             location  = filename[:-4]
             print(f'\tloading location {location}')
-            data      = np.load(filepath, allow_pickle=True)  # Genome sequence data
-                
+            data = np.load(filepath, allow_pickle=True)  # Genome sequence data
+            
+            ref_sites.append(data['ref_sites'])    
             mutant_sites_full.append(np.array(data['allele_number']))
-            dates.append(data['times'])
             dates_full.append(data['times_full'])
             locations.append(location)
             filepaths.append(filepath)
             k_full.append(data['k'])
             R_full.append(data['R'])
             N_full.append(data['N'])
-            RHS_full.append(data['RHS'])
+            #RHS_full.append(data['RHS'])
             inflow_full.append(data['inflow'])
-            counts_full.append(list(data['counts']))
+            counts_full.append(data['counts'])
             #counts_full.append(freqs_from_counts(data['counts'], window=delta_t))
+            counts_temp = data['counts']
+            counts_full.append(counts_temp)
             if not arg_list.no_traj:
                 if 'traj' in data:
                     traj_full.append(data['traj'])
+            dates_temp = data['times_full']
+            dates_temp = np.arange(dates_temp[-1] - len(counts_temp) + 1, dates_temp[-1] + 1)
+            dates.append(dates_temp)
+                    
             
             region_temp = location.split('-')
             if region_temp[3].find('2')==-1:
                 region = '-'.join(region_temp[:4])
             else:
                 region = '-'.join(region_temp[:3])
+            if region[-1]=='-':
+                region = region[:-1]
             regions_full.append(region)
-
     
+    print(dates)
+    print(dates_full)
+            
+    if out_str[-5:]=='north':
+        out_str = out_str[:-5] + region
+    if out_str[-1]=='-':
+        out_str = out_str + region
+    print2('outfile is', out_str)
+    
+    """
     data_after  = []
     data_before = []
     for i in range(len(regions_full)):
@@ -366,10 +388,11 @@ def main(args):
         data_after.append(after)
         data_before.append(before)
         
-    print2(regions_full)
+    #print2(regions_full)
     print2(data_after)
     print2(data_before)
     print2(dates)
+    """
     
     print2('data loaded')
     #regions_cont      = []
@@ -393,6 +416,7 @@ def main(args):
     
     last_covar_times = []    # the last time-point for which there is a covariance matrix in each time series
     for sim in range(len(locations)):
+        print(locations[sim])
         times    = dates[sim]
         final_t  = times[-1]
         cov_path = os.path.join(covar_dir, f'{locations[sim]}___{final_t}.npz')
@@ -410,31 +434,43 @@ def main(args):
     max_times        = [np.amax(i) for i in dates]
     min_times        = [np.amin(i) for i in dates]
     
-    allele_number    = mutant_sites_all
-    mutant_sites_tot = mutant_sites_full
+    allele_number    = np.array(mutant_sites_all)
+    mutant_sites_tot = ref_sites
     print2("number of inferred coefficients is {mutants} out of {mutants_all} total".format(mutants=len(allele_number), mutants_all=len(mutant_sites_all)))
     
-    allele_new = []
-    for i in range(len(allele_number)):
-        for j in range(q):
-            allele_new.append(str(allele_number[i]) + '-' + NUC[j])
 
     #new_mut_types = np.zeros(1)
     
     L   = len(allele_number)
-    g1 *= np.mean(N_full) * np.mean(k_full) / (1 + (np.mean(k_full) / np.mean(R_full)))  # The regularization
+    g1 *= np.mean(pop_size) * np.mean(k) * np.mean(R) / (np.mean(R) + np.mean(k))  # The regularization
     
-    coefficient = (1 / ((1 / (np.mean(N_full) * np.mean(k_full))) + 
-                        ((np.mean(k_full) / np.mean(R_full)) / (np.mean(N_full) * np.mean(k_full) - 1))))
+    coefficient = np.mean(pop_size) * np.mean(k) * np.mean(R) / (np.mean(R) + np.mean(k))
     
     print2('number of sites:', L)
    
     if timed > 0:
         t_solve_old = timer()
+        
+    mutant_sites_tot = mutant_sites_full
+    alleles_temp  = list(np.unique([str(ref_sites[i][j]) for i in range(len(ref_sites)) for j in range(len(ref_sites[i]))]))
     
-    ref_seq, ref_tag  = get_MSA(REF_TAG +'.fasta')
-    ref_seq           = list(ref_seq[0])
-    ref_poly          = np.array(ref_seq)[allele_number]
+    # loading reference sequence index
+    ref_index = pd.read_csv(arg_list.refFile)
+    index     = list(ref_index['ref_index'])
+    index     = [str(i) for i in index]
+    ref_full  = list(ref_index['nucleotide'])
+    allele_number = []
+    ref_poly      = []
+    for i in range(len(index)):
+        if index[i] in alleles_temp:
+            allele_number.append(index[i])
+            ref_poly.append(ref_full[i])
+    allele_number = np.array(allele_number)
+    allele_new    = []
+    for i in range(len(allele_number)):
+        for j in range(q):
+            allele_new.append(str(allele_number[i]) + '-' + NUC[j])
+    
     selection         = []
     selection_nocovar = []
     error_bars        = []
@@ -445,6 +481,8 @@ def main(args):
     # arrays that give the position of the mutations in each region in the list of all mutations
     alleles_sorted = np.argsort(allele_number)
     positions_all  = [np.searchsorted(allele_number[alleles_sorted], i) for i in mutant_sites_tot]
+    positions_all  = [alleles_sorted[i] for i in positions_all]
+    #print('positions', positions_all[0])
     
     covar_out_dir  = out_str + 'tv-covar'
     if not os.path.exists(covar_out_dir):
@@ -455,7 +493,7 @@ def main(args):
         A_t  = np.zeros((L * q, L * q))
         b_t  = np.zeros(L * q)
         date = dates_covar[t]
-        print2(f'time = {date}')
+        #print2(f'time = {date}')
         if date < arg_list.start_time or date > arg_list.end_time:
             continue
         for sim in range(len(filepaths)):
@@ -467,16 +505,16 @@ def main(args):
             mutant_sites = mutant_sites_tot[sim]
             if date < times_full[0]:
                 #RHS = np.zeros(len(mutant_sites) * q)
+                #print(f'skipping {date} due to lack of data')
                 continue
             #RHS          = RHS_full[sim]
             region       = regions_full[sim]
-            counts       = counts_full[sim]
+            counts       = counts_full[sim] * coefficient
             positions    = positions_all[sim]
-            positions    = alleles_sorted[positions]
             
             # right-hand side
             RHS_zero = False
-            print2(f'\tregion is {locations[sim]}')
+            #print2(f'\tregion is {locations[sim]}')
             """
             if date in times:
                 date_idx = list(times).index(date)
@@ -508,20 +546,36 @@ def main(args):
                 RHS_zero = True
                 RHS      = np.zeros(len(mutant_sites) * q)
             
+           # if not RHS_zero:
+           #     print('number of nonzero entries in the RHS is', len(np.nonzero(RHS)[0]))
+            
             # covariance
             if date in times_full:
-                print2(f'{locations[sim]}___{date}.npz')
+                #print2(f'{locations[sim]}___{date}.npz')
                 covar_file     = os.path.join(covar_dir, f'{locations[sim]}___{date}.npz')
                 if not os.path.exists(covar_file):
                     print2(f'{date} in times file but corresponding covariance not found')
                     covar_file = os.path.join(covar_dir, f'{locations[sim]}___{last_covar_times[sim]}.npz')
+                    continue
                 covar          = np.load(covar_file, allow_pickle=True)['covar']
             elif date > times_full[-1]:
-                print2(f'{locations[sim]}___{last_covar_times[sim]}.npz')
+                #print2(f'{locations[sim]}___{last_covar_times[sim]}.npz')
                 covar_file     = os.path.join(covar_dir, f'{locations[sim]}___{last_covar_times[sim]}.npz')
                 covar          = np.load(covar_file, allow_pickle=True)['covar']
-                print2('shapes:', np.shape(covar), len(mutant_sites) * q)
+            else:
+                continue
+            #print2('shapes:', np.shape(covar), len(mutant_sites) * q)
+            
+            if not np.all(np.isfinite(covar)):
+                print(f'covariance for region {region} at time {date} has nonfinite values')
+                continue
+            if not np.all(np.isfinite(RHS)):
+                print(f'RHS for region {region} at time {date} has nonfinite values')
+                continue
                 
+            if np.count_nonzero(RHS)==0:
+                print(f'RHS is zero at time {date} for region {locations[sim]}')
+                continue
             
             if timed > 1:
                 sim_load = timer()
@@ -532,9 +586,9 @@ def main(args):
             #    RHS_zero = True
                 
             for i in range(len(mutant_sites)):
-                #b_t[positions[i] * q : (positions[i] + 1) * q] += RHS[date_idx, i * q : (i + 1) * q]
-                if not RHS_zero:
-                    b_t[positions[i] * q : (positions[i] + 1) * q] += RHS[i * q : (i + 1) * q]
+                b_t[positions[i] * q : (positions[i] + 1) * q] += RHS[i * q : (i + 1) * q]
+                #if not RHS_zero:
+                    #b_t[positions[i] * q : (positions[i] + 1) * q] += RHS[i * q : (i + 1) * q]
                 A_t[positions[i] * q : (positions[i] + 1) * q, positions[i] * q : (positions[i] + 1) * q] += covar[i * q : (i + 1) * q, i * q : (i + 1) * q]
                 for k in range(i + 1, len(mutant_sites)):
                     A_t[positions[i] * q : (positions[i] + 1) * q, positions[k] * q : (positions[k] + 1) * q] += covar[i * q : (i + 1) * q, k * q : (k + 1) * q]
@@ -545,8 +599,8 @@ def main(args):
                 print2(f'adding the RHS and the covariance in region {locations[sim]} took {sim_add_arrays - sim_load} seconds')
         
         # save covariance and RHS at this time
-        A_t *= coefficient / 5
-        b_t *= coefficient 
+        #A_t *= coefficient / 5
+        #b_t *= coefficient 
         #np.savez_compressed(os.path.join(covar_out_dir, f'covar---{date}.npz'), covar=A_t, RHS=b_t)
         
         if timed > 1:
@@ -555,12 +609,14 @@ def main(args):
         
         # skip loop if there is no frequency change data
         if np.all(b_t==np.zeros(L * q)):
+            print(f'right hand side is zero for time {date}')
             continue
         
         # regularize
         for i in range(L * q):
             A_t[i, i] += g1
-        selection_temp         = linalg.solve(A_t, b_t, assume_a='sym')
+        selection_temp = linalg.solve(A_t, b_t, assume_a='sym')
+        
         if timed > 1:
             system_solve_time  = timer()
             print2(f'solving the system of equations took {system_solve_time - save_covar_time} seconds')
@@ -596,12 +652,13 @@ def main(args):
             normalization_time = timer()
             print2(f'normalizing the selection coefficients took {normalization_time - system_solve_time} seconds')
         
+        print2(out_str + f'---{date}.npz')
         np.savez_compressed(out_str + f'---{date}.npz', selection=s_new, selection_independent=s_SL, error_bars=error_bars_temp, allele_number=allele_new)
         #np.savez_compressed(os.path.join(out_str, f'covar---{date}.npz'), covar=A_t, RHS=b_t)
     
         if timed > 0:
             t_solve_new = timer()
-            print2(f"calucluating the selection coefficients for time {date} out of {len(dates_covar)}", t_solve_new - t_solve_old)
+            print2(f"calucluating the selection coefficients for time {date} out of {dates_covar[-1]}", t_solve_new - t_solve_old)
             t_solve_old = timer()
     
     # Change labels of sites to include the nucleotide mutation
@@ -622,6 +679,8 @@ def main(args):
         
     # save the solution  
     
+    if out_str[-4:]=='.npz':
+        out_str = out_str[:-4]
     g = open(out_str+'.npz', mode='w+b') 
     if not mask_site:
         np.savez_compressed(g, error_bars=error_bars, selection=selection, traj=traj_full, 
