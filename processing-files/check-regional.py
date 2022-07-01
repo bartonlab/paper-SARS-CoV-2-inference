@@ -36,6 +36,7 @@ def main(args):
         df = pd.read_csv(msa_file, usecols=['accession', 'location', 'virus_name'])
     locs   = list(df.location)  
     
+    """
     if not arg_list.laboratory:
         virus_name = list(df.virus_name)
         virus_name = [i.split('/') for i in virus_name]
@@ -113,8 +114,108 @@ def main(args):
             subregions.append('/'.join(l[3:]))
         else:
             subregions.append('NA')
+    """
+    if 'virus_name' in df:
+        virus_name = list(df.virus_name)
+        virus_name = [i.split('/') for i in virus_name]
+        locs2      = []
+        for i in range(len(virus_name)):
+            if len(virus_name[i])>2:
+                locs2.append(virus_name[i][2])
+            else:
+                print(len(virus_name[i]))
+                locs2.append('')
+        locs_new   = []
+        for i in range(len(locs)):
+            l = locs[i].split(' / ')
+            m = locs2[i].split('-')[:-1]
+            m = [j.lower() for j in m]
+            if len(l) == 1:
+                l.append('NA')
+                l.append('NA')
+                l.append('/'.join(m))
+            if len(l) == 2:
+                l.append('NA')
+                l.append('/'.join(m))
+            elif len(l) == 3:
+                l.append('/'.join(m))
+            elif len(l) == 4:
+                l[3] += '/' + '/'.join(m)
+            #else:
+                #print('there is too much location information', len(l), len(m))
+            locs_new.append(l)
+        """   
+        for i in range(len(locs)):
+            l = locs[i].split(' / ')
+            m = locs2[i].split('-')[:-1]
+            m = [j.lower() for j in m]
+            if len(l) == 1:
+                l.append('NA')
+                l.append('NA')
+                l.append('NA')
+                l.append('/'.join(m))
+            if len(l) == 2:
+                l.append('NA')
+                l.append('NA')
+                l.append('/'.join(m))
+            elif len(l) == 3:
+                l.append('NA')
+                l.append('/'.join(m))
+            elif len(l) == 4:
+                l.append('/'.join(m))
+            elif len(l) == 5:
+                l[4] += '/' + '/'.join(m)
+            #else:
+                #print('there is too much location information', len(l), len(m))
+            locs_new.append(l)
+        """
+    else:
+        locs_new = [locs[i].split(' / ') for i in range(len(locs))]
+    # separate the different location data and put it in separate columns.
+    continent    = []
+    country      = []
+    region       = []
+    subregion    = []
+    subsubregion = []
+    for l in locs_new:
+        #l = l.split(' / ')
+        if len(l)>0:
+            continent.append(l[0])
+        else:
+            continent.append('NA')
         
-    data = dict(continent=continents, country=countries, region=regions, subregion=subregions)
+        if len(l)>1:
+            if l[1] == 'houston':
+                country.append('usa')
+                region.append('texas')
+                subregion.append('houston')
+                subsubregion.append('NA')
+                continue
+            else:
+                country.append(l[1])
+        else:
+            country.append('NA')
+        
+        if len(l)>2:
+            region.append(l[2])
+        else:
+            region.append('NA')
+        if len(l)>3:
+            subregion.append(l[3])
+        else:
+            subregion.append('NA')
+        if len(l)>4:
+            subsubregion.append('/'.join(l[3:]))
+        else:
+            subsubregion.append('NA')
+        """
+        if len(l)>3:
+            subregion.append('/'.join(l[3:]))
+        else:
+            subregion.append('NA')  
+        """
+        
+    data = dict(continent=continent, country=country, region=region, subregion=subregion)
     df   = pd.DataFrame(data=data)
     
     """
