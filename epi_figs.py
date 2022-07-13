@@ -1464,11 +1464,11 @@ def location_from_filename(filename):
     return location
         
         
-def sampling_plots(folder, out_file=None, log=False):
+def sampling_plots(folder, out_file=None, log=False, temp_dir=os.path.join('data', 'sampling-plots')):
     """ Given the folder containing the data files, plots the number of sampled genomes for each region."""
     
     N = len(os.listdir(folder))
-    gen_dir = '/Users/brianlee/Desktop/sampling-plots'
+    gen_dir = temp_dir
     if not os.path.exists(gen_dir):
         os.mkdir(gen_dir)
     else:
@@ -6770,24 +6770,28 @@ def finite_sampling_plot(rep_folder, rep_perfect):
     grid = matplotlib.gridspec.GridSpec(n_pops*4+2, 5, figure=fig, wspace=0, hspace=0)
     axes_list = []
     ax_titles0 = fig.add_subplot(grid[0:2, 0])
-    ax_titles0.text(0.5, 0.5, "Population\nSize", transform=ax_titles0.transAxes, ha='center', va='center', fontweight='bold', fontsize=AXES_FONTSIZE)
+    ax_titles0.text(0.5, 0.5, "Number of new\ninfections per\nserial interval", transform=ax_titles0.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
     ax_titles0.spines['right'].set_linewidth(SPINE_LW)
     ax_titles0.set_xticks([])
     ax_titles0.set_yticks([])
     ax_titles1 = fig.add_subplot(grid[0:2, 1])
-    ax_titles1.text(0.5, 0.5, "Sampling", transform=ax_titles1.transAxes, ha='center', va='center', fontweight='bold', fontsize=AXES_FONTSIZE)
+    ax_titles1.text(0.5, 0.5, "Sampling", transform=ax_titles1.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
     axes_list.append(ax_titles1)
     ax_titles2 = fig.add_subplot(grid[0:2, 2])
-    ax_titles2.text(0.5, 0.5, "Inference\nParameter (n)", transform=ax_titles2.transAxes, ha='center', va='center', fontweight='bold', fontsize=AXES_FONTSIZE)
+    ax_titles2.text(0.5, 0.5, "Inference\nParameter (n)", transform=ax_titles2.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
     axes_list.append(ax_titles2)
     ax_titles3 = fig.add_subplot(grid[0:2, 3])
-    ax_titles3.text(0.5, 0.5, "AUROC\nBeneficial", transform=ax_titles3.transAxes, ha='center', va='center', fontweight='bold', fontsize=AXES_FONTSIZE)
+    ax_titles3.text(0.5, 0.5, "AUROC\nBeneficial", transform=ax_titles3.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
     axes_list.append(ax_titles3)
     ax_titles4 = fig.add_subplot(grid[0:2, 4])
-    ax_titles4.text(0.5, 0.5, "AUROC\nDeleterious", transform=ax_titles4.transAxes, ha='center', va='center', fontweight='bold', fontsize=AXES_FONTSIZE)
+    ax_titles4.text(0.5, 0.5, "AUROC\nDeleterious", transform=ax_titles4.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
     ax_titles4.spines['left'].set_linewidth(SPINE_LW)
     ax_titles4.set_xticks([])
     ax_titles4.set_yticks([])
+    
+    yticks3 = [0, 30000, 60000]
+    yticks1 = [0, 50000, 100000]
+    yticks2 = [0, 100000, 200000]
         
     i = 1
     for folder in sorted(os.listdir(os.fsencode(rep_folder))):
@@ -6795,18 +6799,26 @@ def finite_sampling_plot(rep_folder, rep_perfect):
         folder_name = os.fsdecode(folder)
         folder_path = os.path.join(rep_folder, folder_name)
         if os.path.isdir(folder_path) and folder_name!='.ipynb_checkpoints':
-            #print(folder_name, '(directory found)')
             for file in sorted(os.listdir(folder_path)):
                 if os.fsdecode(file)[:10]=='population':
                     pop_file   = np.load(os.path.join(rep_folder, folder_name, os.fsdecode(file)), allow_pickle=True)
+                    if np.amax(pop_file) < 70000:
+                        yticks = [0, 30000, 60000]
+                        yticklabels = ['0', '30', '60']
+                    elif np.amax(pop_file) < 110000:
+                        yticks = [0, 50000, 100000]
+                        yticklabels = ['0', '50', '100']
+                    else:
+                        yticks = [0, 100000, 200000]
+                        yticklabels = ['0', '100', '200']
+                    #print(np.amin(pop_file))
+                    #print(np.amax(pop_file))
                 elif os.fsdecode(file)[-6:]=='tv.npz':
                     tv_file    = np.load(os.path.join(rep_folder, folder_name, os.fsdecode(file)), allow_pickle=True)
                 elif os.fsdecode(file)[-9:]=='const.npz':
                     const_file = np.load(os.path.join(rep_folder, folder_name, os.fsdecode(file)), allow_pickle=True)
                 else:
                     print('unknown file')
-                #print(file)
-            # calculate AUROC
             folder_path2 = os.path.join(rep_perfect, folder_name)
             tv_perfect, const_perfect = None, None
             for file in sorted(os.listdir(folder_path2)):
@@ -6823,6 +6835,7 @@ def finite_sampling_plot(rep_folder, rep_perfect):
                 
             # can use the below to color code the squares based on which of tv or const provides the better estimate
             # uncomment the code in the plotting section to instead shade them according to a color map and the AUROC value
+            """
             br = ['cornflowerblue', 'lightcoral']
             if AUC_ben_tv > AUC_ben_const:
                 c_ben_finite = br
@@ -6840,12 +6853,15 @@ def finite_sampling_plot(rep_folder, rep_perfect):
                 c_del_perfect = br
             else:
                 c_del_perfect = br[::-1]
+            """
                 
             
-             # make plots
+            # make plots
             ax0 = fig.add_subplot(grid[4*i-2:4*i+2, 0])
             sns.lineplot(np.arange(len(pop_file)), pop_file, lw=0.5, ax=ax0)
             ax0.spines['right'].set_linewidth(SPINE_LW)
+            #ax0.set_yticks(yticks)
+            #ax0.set_yticklabels(yticklabels)
             ax0.set_xticks([])
             ax0.set_yticks([])
                 
@@ -6858,100 +6874,128 @@ def finite_sampling_plot(rep_folder, rep_perfect):
             axes_list.append(ax1b)
                 
             ax2a = fig.add_subplot(grid[4*i-2, 2])
-            ax2a.text(0.5, 0.5, 'Time-Varying', transform=ax2a.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
+            #ax2a.text(0.5, 0.5, 'Time-Varying', transform=ax2a.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
             if AUC_ben_tv > AUC_ben_const and AUC_del_tv > AUC_del_const:
-                ax2a.patch.set_facecolor(c_ben_finite[1])
-            elif AUC_ben_tv < AUC_ben_const and AUC_del_tv < AUC_del_const:
-                ax2a.patch.set_facecolor(c_ben_finite[0])
+                #ax2a.patch.set_facecolor(c_ben_finite[1])
+                ax2a.text(0.5, 0.5, 'Time-Varying', transform=ax2a.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE, fontweight='bold')
+            else:
+                ax2a.text(0.5, 0.5, 'Time-Varying', transform=ax2a.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
+            #elif AUC_ben_tv < AUC_ben_const and AUC_del_tv < AUC_del_const:
+            #    ax2a.patch.set_facecolor(c_ben_finite[0])
             ax2a.spines['bottom'].set_linewidth(SPINE_LW)
             axes_list.append(ax2a)
                 
             ax2b = fig.add_subplot(grid[4*i-1, 2])
-            ax2b.text(0.5, 0.5, 'Constant', transform=ax2b.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
+            #ax2b.text(0.5, 0.5, 'Constant', transform=ax2b.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
             if AUC_ben_tv > AUC_ben_const and AUC_del_tv > AUC_del_const:
-                ax2b.patch.set_facecolor(c_ben_finite[0])
-            elif AUC_ben_tv < AUC_ben_const and AUC_del_tv < AUC_del_const:
-                ax2b.patch.set_facecolor(c_ben_finite[1])
+                #ax2b.patch.set_facecolor(c_ben_finite[0])
+                ax2b.text(0.5, 0.5, 'Constant', transform=ax2b.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
+            else:
+                ax2b.text(0.5, 0.5, 'Constant', transform=ax2b.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE, fontweight='bold')
+            #elif AUC_ben_tv < AUC_ben_const and AUC_del_tv < AUC_del_const:
+                #ax2b.patch.set_facecolor(c_ben_finite[1])
             ax2b.spines['top'].set_linewidth(SPINE_LW)
             axes_list.append(ax2b)
                 
             ax2c = fig.add_subplot(grid[4*i, 2])
-            ax2c.text(0.5, 0.5, 'Time-Varying', transform=ax2c.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
+            #ax2c.text(0.5, 0.5, 'Time-Varying', transform=ax2c.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
             if AUC_per_ben_tv > AUC_per_ben_const and AUC_per_del_tv > AUC_per_del_const:
-                ax2c.patch.set_facecolor(c_ben_perfect[0])
-            elif AUC_per_ben_tv < AUC_per_ben_const and AUC_per_del_tv < AUC_per_del_const:
-                ax2c.patch.set_facecolor(c_ben_perfect[1])
+                #ax2c.patch.set_facecolor(c_ben_perfect[0])
+                ax2c.text(0.5, 0.5, 'Time-Varying', transform=ax2c.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE, fontweight='bold')
+            else:
+                ax2c.text(0.5, 0.5, 'Time-Varying', transform=ax2c.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
+            #elif AUC_per_ben_tv < AUC_per_ben_const and AUC_per_del_tv < AUC_per_del_const:
+                #ax2c.patch.set_facecolor(c_ben_perfect[1])
             ax2c.spines['bottom'].set_linewidth(SPINE_LW)
             axes_list.append(ax2c)
                 
             ax2d = fig.add_subplot(grid[4*i+1, 2])
-            ax2d.text(0.5, 0.5, 'Constant', transform=ax2d.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
+            #ax2d.text(0.5, 0.5, 'Constant', transform=ax2d.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
             if AUC_per_ben_tv > AUC_per_ben_const and AUC_per_del_tv > AUC_per_del_const:
-                ax2d.patch.set_facecolor(c_ben_perfect[1])
-            elif AUC_per_ben_tv < AUC_per_ben_const and AUC_per_del_tv < AUC_per_del_const:
-                ax2d.patch.set_facecolor(c_ben_perfect[0])
+                ax2d.text(0.5, 0.5, 'Constant', transform=ax2d.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
+            else:
+                ax2d.text(0.5, 0.5, 'Constant', transform=ax2d.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE, fontweight='bold')
+                #ax2d.patch.set_facecolor(c_ben_perfect[1])
+            #elif AUC_per_ben_tv < AUC_per_ben_const and AUC_per_del_tv < AUC_per_del_const:
+                #ax2d.patch.set_facecolor(c_ben_perfect[0])
             ax2d.spines['top'].set_linewidth(SPINE_LW)
             axes_list.append(ax2d)
                 
             ax3a = fig.add_subplot(grid[4*i-2, 3])
-            #ax3a.patch.set_facecolor(color_map(AUC_ben_tv))
-            ax3a.patch.set_facecolor(c_ben_finite[0])
-            ax3a.text(0.5, 0.5, str(AUC_ben_tv)[:5], transform=ax3a.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
+            #ax3a.patch.set_facecolor(c_ben_finite[0])
+            if AUC_ben_tv > AUC_ben_const and AUC_del_tv > AUC_del_const:
+                ax3a.text(0.5, 0.5, str(AUC_ben_tv)[:5], transform=ax3a.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE, fontweight='bold')
+            else:
+                ax3a.text(0.5, 0.5, str(AUC_ben_tv)[:5], transform=ax3a.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
             ax3a.spines['bottom'].set_linewidth(SPINE_LW)
             axes_list.append(ax3a)
                                          
             ax3b = fig.add_subplot(grid[4*i-1, 3])
-            #ax3b.patch.set_facecolor(color_map(AUC_ben_const))
-            ax3b.patch.set_facecolor(c_ben_finite[1])
-            ax3b.text(0.5, 0.5, str(AUC_ben_const)[:5], transform=ax3b.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE) 
+            #ax3b.patch.set_facecolor(c_ben_finite[1])
+            if AUC_ben_tv > AUC_ben_const and AUC_del_tv > AUC_del_const:
+                ax3b.text(0.5, 0.5, str(AUC_ben_const)[:5], transform=ax3b.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE) 
+            else:
+                ax3b.text(0.5, 0.5, str(AUC_ben_const)[:5], transform=ax3b.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE, fontweight='bold') 
             ax3b.spines['top'].set_linewidth(SPINE_LW)
             axes_list.append(ax3b)
                 
             ax3c = fig.add_subplot(grid[4*i, 3])
-            #ax3c.patch.set_facecolor(color_map(AUC_per_ben_tv))
-            ax3c.patch.set_facecolor(c_ben_perfect[0])
-            ax3c.text(0.5, 0.5, str(AUC_per_ben_tv)[:5], transform=ax3c.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
+            #ax3c.patch.set_facecolor(c_ben_perfect[0])
+            if AUC_per_ben_tv > AUC_per_ben_const and AUC_per_del_tv > AUC_per_del_const:
+                ax3c.text(0.5, 0.5, str(AUC_per_ben_tv)[:5], transform=ax3c.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE, fontweight='bold')
+            else:
+                ax3c.text(0.5, 0.5, str(AUC_per_ben_tv)[:5], transform=ax3c.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
             ax3c.spines['bottom'].set_linewidth(SPINE_LW)
             axes_list.append(ax3c)
                 
             ax3d = fig.add_subplot(grid[4*i+1, 3])
-            #ax3d.patch.set_facecolor(color_map(AUC_per_ben_tv))
-            ax3d.patch.set_facecolor(c_ben_perfect[1])
-            ax3d.text(0.5, 0.5, str(AUC_per_ben_const)[:5], transform=ax3d.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
+            #ax3d.patch.set_facecolor(c_ben_perfect[1])
+            if AUC_per_ben_tv > AUC_per_ben_const and AUC_per_del_tv > AUC_per_del_const:
+                ax3d.text(0.5, 0.5, str(AUC_per_ben_const)[:5], transform=ax3d.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
+            else:
+                ax3d.text(0.5, 0.5, str(AUC_per_ben_const)[:5], transform=ax3d.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE, fontweight='bold')
             ax3d.spines['top'].set_linewidth(SPINE_LW)
             axes_list.append(ax3d)
                
             ax4a = fig.add_subplot(grid[4*i-2, 4])
-            #ax4a.patch.set_facecolor(color_map(AUC_del_tv))
-            ax4a.patch.set_facecolor(c_del_finite[0])
-            ax4a.text(0.5, 0.5, str(AUC_del_tv)[:5], transform=ax4a.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE) 
+            #ax4a.patch.set_facecolor(c_del_finite[0])
+            if AUC_ben_tv > AUC_ben_const and AUC_del_tv > AUC_del_const:
+                ax4a.text(0.5, 0.5, str(AUC_del_tv)[:5], transform=ax4a.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE, fontweight='bold') 
+            else:
+                ax4a.text(0.5, 0.5, str(AUC_del_tv)[:5], transform=ax4a.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
             ax4a.spines['bottom'].set_linewidth(SPINE_LW)
             ax4a.spines['left'].set_linewidth(SPINE_LW)
             ax4a.set_xticks([])
             ax4a.set_yticks([])
             
             ax4b = fig.add_subplot(grid[4*i-1, 4])
-            #ax4b.patch.set_facecolor(color_map(AUC_del_const))
-            ax4b.patch.set_facecolor(c_del_finite[1])
-            ax4b.text(0.5, 0.5, str(AUC_del_const)[:5], transform=ax4b.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE) 
+            #ax4b.patch.set_facecolor(c_del_finite[1])
+            if AUC_ben_tv > AUC_ben_const and AUC_del_tv > AUC_del_const:
+                ax4b.text(0.5, 0.5, str(AUC_del_const)[:5], transform=ax4b.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE) 
+            else:
+                ax4b.text(0.5, 0.5, str(AUC_del_const)[:5], transform=ax4b.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE, fontweight='bold') 
             ax4b.spines['top'].set_linewidth(SPINE_LW)
             ax4b.spines['left'].set_linewidth(SPINE_LW)
             ax4b.set_xticks([])
             ax4b.set_yticks([])
                 
             ax4c = fig.add_subplot(grid[4*i, 4])
-            #ax4c.patch.set_facecolor(color_map(AUC_per_del_tv))
-            ax4c.patch.set_facecolor(c_del_perfect[0])
-            ax4c.text(0.5, 0.5, str(AUC_per_del_tv)[:5], transform=ax4c.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE) 
+            #ax4c.patch.set_facecolor(c_del_perfect[0])
+            if AUC_per_ben_tv > AUC_per_ben_const and AUC_per_del_tv > AUC_per_del_const:
+                ax4c.text(0.5, 0.5, str(AUC_per_del_tv)[:5], transform=ax4c.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE, fontweight='bold') 
+            else: 
+                ax4c.text(0.5, 0.5, str(AUC_per_del_tv)[:5], transform=ax4c.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE)
             ax4c.spines['bottom'].set_linewidth(SPINE_LW)
             ax4c.spines['left'].set_linewidth(SPINE_LW)
             ax4c.set_xticks([])
             ax4c.set_yticks([])
             
             ax4d = fig.add_subplot(grid[4*i+1, 4])
-            #ax4d.patch.set_facecolor(color_map(AUC_per_del_const))
-            ax4d.patch.set_facecolor(c_del_perfect[1])
-            ax4d.text(0.5, 0.5, str(AUC_per_del_const)[:5], transform=ax4d.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE) 
+            #ax4d.patch.set_facecolor(c_del_perfect[1])
+            if AUC_per_ben_tv > AUC_per_ben_const and AUC_per_del_tv > AUC_per_del_const:
+                ax4d.text(0.5, 0.5, str(AUC_per_del_const)[:5], transform=ax4d.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE) 
+            else:
+                ax4d.text(0.5, 0.5, str(AUC_per_del_const)[:5], transform=ax4d.transAxes, ha='center', va='center', fontsize=AXES_FONTSIZE, fontweight='bold') 
             ax4d.spines['top'].set_linewidth(SPINE_LW)
             ax4d.spines['left'].set_linewidth(SPINE_LW)
             ax4d.set_xticks([])
@@ -6968,7 +7012,7 @@ def finite_sampling_plot(rep_folder, rep_perfect):
     plt.gcf().subplots_adjust(top=0.99)
     plt.gcf().subplots_adjust(left=0.01)
     plt.gcf().subplots_adjust(right=0.99)
-    plt.savefig(os.path.join(fig_path, 'finite-sampling.png'), dpi=1200)
+    plt.savefig(os.path.join(fig_path, 'finite-sampling.pdf'), dpi=1200)
 
         
 def trajectory_reshape(traj):

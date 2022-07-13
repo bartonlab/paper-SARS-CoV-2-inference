@@ -911,12 +911,6 @@ def trajectory_calc_20e_eu1(nVec, sVec, mutant_sites_samp, d=5):
     return single_freq_s
 
 
-def count_total_sequences(region_file):
-    """ Finds the total number of sequences in a region given the .npz files. """
-    nVec = np.load(region_file, allow_pickle=True)['nVec']
-    return np.sum(np.array([np.sum(i) for i in nVec]))
-
-
 def get_noncanonical_orfs(i):
     # For a sequence index i, find the noncanonical reading frames, protein number, and nucleotide in codon number
     
@@ -1023,7 +1017,7 @@ def find_site_index_file(filepath):
         return filepath[:filepath.find('---')] + '-sites.csv' 
     
     
-def calculate_selection(tv_inf_dir, link_file, cutoff=0.1318, start_date=None):
+def calculate_selection(tv_inf_dir, link_file, cutoff=0.1318, start_date=None, elim_prior=False):
     """Finds all individual sites and groups of linked sites that would be inferred to be larger than
     the cutoff in any region at any time"""
     linked_sites = np.load(link_file, allow_pickle=True)
@@ -1039,8 +1033,8 @@ def calculate_selection(tv_inf_dir, link_file, cutoff=0.1318, start_date=None):
         if start_date!=None:
             if start_date > t_inf[-1]:
                 continue
-            elif start_date in t_inf:
-                s = s[list(t_inf).index(start_date):]
+        #    elif start_date in t_inf:
+        #        s = s[list(t_inf).index(start_date):]
         
         muts_nolink = [i for i in muts if i not in linked_all]
         s_link      = np.zeros((len(linked_sites), len(s)))
@@ -1051,18 +1045,49 @@ def calculate_selection(tv_inf_dir, link_file, cutoff=0.1318, start_date=None):
             for j in range(len(linked_sites[i])):
                 if linked_sites[i][j] in muts:
                     s_link[i] += s[:, muts.index(linked_sites[i][j])]
-        s_link   = np.amax(s_link, axis=1)
-        s_nolink = np.amax(s_nolink, axis=1)
+        #s_link   = np.amax(s_link, axis=1)
+        #s_nolink = np.amax(s_nolink, axis=1)
         
         # masking out mutations and groups with selection coefficient smaller than cutoff
-        link_mask = s_link >= cutoff
+        #link_mask = s_link >= cutoff
+        new_mask  = []
+        if start_date!=None:
+            for i in range(len(linked_sites)):
+                if np.amax(s_link[i]) < cutoff:
+                    continue
+                if t_inf[np.where(s_link[i]>=cutoff)[0][0]] < start_date:
+                    continue
+                else:
+                    new_mask.append(i)
+            if len(new_mask) == 0:
+                continue
+            link_mask = np.array(new_mask)
+        else:
+            link_mask = np.amax(s_link, axis=1) >= cutoff
+                
         muts_link = np.array(linked_sites)[link_mask]
         s_link_large = s_link[link_mask]
         for i in range(len(muts_link)):
             locations.append(file[:-4])
             sites.append(muts_link[i])
             s_large.append(s_link_large[i])
-        nolink_mask = s_nolink >= cutoff
+            
+        #nolink_mask = s_nolink >= cutoff
+        new_mask    = []
+        if start_date!=None:
+            for i in range(len(muts_nolink)):
+                if np.amax(s_nolink[i]) < cutoff:
+                    continue
+                if t_inf[np.where(s_nolink[i]>=cutoff)[0][0]] < start_date:
+                    continue
+                else:
+                    new_mask.append(i)
+            if len(new_mask) == 0:
+                continue
+            nolink_mask = np.array(new_mask)
+        else:
+            nolink_mask = np.amax(s_nolink, axis=1) >= cutoff
+        
         muts_nolink = np.array(muts_nolink)[nolink_mask]
         s_nolink_large = s_nolink[nolink_mask]
         for i in range(len(muts_nolink)):
