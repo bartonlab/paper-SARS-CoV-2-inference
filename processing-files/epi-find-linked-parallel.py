@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
+# %%
 
-# In[ ]:
+# %%
 
 # Check what the above means
 
@@ -13,6 +14,8 @@ import os
 import math
 import datetime as dt
 import subprocess
+import pandas as pd
+import data_processing as dp
 #cwd = os.getcwd()
 #os.chdir('/Users/brianlee/SARS-CoV-2-Data/Processing-files')
 #import data_processing as dp
@@ -80,14 +83,14 @@ def find_linked_pairs(single, double, alleles, tol=0.8, q=5, ref_poly=None, min_
     return linked_pairs
 
 
-def find_linked_pairs_region(single, double, alleles, freq_max, linked_pairs, ref_poly=None, tol=0.8, freq_tol=0.01, q=5, min_counts=5):
+def find_linked_pairs_region(single, double, alleles, linked_pairs, ref_poly=None, tol=0.8, freq_tol=0.01, q=5, min_counts=5):
     """ Takes the single and double site counts and finds pairs of mutations that are linked
     NEEDS TESTING. IS IT FASTER?"""
     
     L = len(single)
     for i in range(L):
-        if single[i]<min_counts:
-            continue
+        #if single[i]<min_counts:
+        #    continue
         # ignore nucleotide if it is the reference nucleotide at this site
         site_num1 = int(i / q)
         nuc_idx1  = i % q
@@ -111,7 +114,7 @@ def find_linked_pairs_region(single, double, alleles, freq_max, linked_pairs, re
                     continue
                     
             if double[i,j]/single[i]>tol and double[i][j]/single[j]>tol:
-                if freq_max[i]>freq_tol and freq_max[j]>freq_tol and [alleles[i], alleles[j]] not in linked_pairs:
+                if [alleles[i], alleles[j]] not in linked_pairs:
                     linked_pairs.append([alleles[i], alleles[j]])
                 #if ([alleles[i], alleles[j]] not in linked_pairs) and ([alleles[j], alleles[i]] not in linked_pairs):
                     #linked_pairs.append([alleles[i], alleles[j]])
@@ -246,116 +249,12 @@ def combine_linked_sites2(linked_sites):
         if new:
             linked_new.append(new_series)
     return linked_new
-
-
-def get_label(i):
-    """ For a SARS-CoV-2 reference sequence index i, return the label in the form 
-    'coding region - protein number-nucleotide in codon number'. 
-    For example, 'ORF1b-204-1'. 
-    Should check to make sure NSP12 labels are correct due to the frame shift."""
-    i = int(i)
-    frame_shift = str(i - get_codon_start_index(i))
-    if   (25392<=i<26220):
-        return "ORF3a-" + str(int((i - 25392) / 3) + 1)  + '-' + frame_shift
-    elif (26244<=i<26472):
-        return "E-"     + str(int((i - 26244) / 3) + 1)  + '-' + frame_shift
-    elif (27201<=i<27387):
-        return "ORF6-"  + str(int((i - 27201) / 3) + 1)  + '-' + frame_shift
-    elif (27393<=i<27759):
-        return "ORF7a-" + str(int((i - 27393) / 3) + 1)  + '-' + frame_shift
-    elif (27755<=i<27887):
-        return "ORF7b-" + str(int((i - 27755) / 3) + 1)  + '-' + frame_shift
-    elif (  265<=i<805):
-        return "NSP1-"  + str(int((i - 265  ) / 3) + 1)  + '-' + frame_shift
-    elif (  805<=i<2719):
-        return "NSP2-"  + str(int((i - 805  ) / 3) + 1)  + '-' + frame_shift
-    elif ( 2719<=i<8554):
-        return "NSP3-"  + str(int((i - 2719 ) / 3) + 1)  + '-' + frame_shift
-            # Compound protein containing a proteinase, a phosphoesterase transmembrane domain 1, etc.
-    elif ( 8554<=i<10054):
-        return "NSP4-"  + str(int((i - 8554 ) / 3) + 1)  + '-' + frame_shift
-            # Transmembrane domain 2
-    elif (10054<=i<10972):
-        return "NSP5-"  + str(int((i - 10054) / 3) + 1)  + '-' + frame_shift
-            # Main proteinase
-    elif (10972<=i<11842):
-        return "NSP6-"  + str(int((i - 10972) / 3) + 1)  + '-' + frame_shift
-            # Putative transmembrane domain
-    elif (11842<=i<12091):
-        return "NSP7-"  + str(int((i - 11842) / 3) + 1)  + '-' + frame_shift
-    elif (12091<=i<12685):
-        return "NSP8-"  + str(int((i - 12091) / 3) + 1)  + '-' + frame_shift
-    elif (12685<=i<13024):
-        return "NSP9-"  + str(int((i - 12685) / 3) + 1)  + '-' + frame_shift
-            # ssRNA-binding protein
-    elif (13024<=i<13441):
-        return "NSP10-" + str(int((i - 13024) / 3) + 1)  + '-' + frame_shift
-            # CysHis, formerly growth-factor-like protein
-    # Check that aa indexing is correct for NSP12, becuase there is a -1 ribosomal frameshift at 13468. It is not, because the amino acids in the first frame
-    # need to be added to the counter in the second frame.
-    elif (13441<=i<13467):
-        return "NSP12-" + str(int((i - 13441) / 3) + 1)  + '-' + frame_shift
-    elif (13467<=i<16236):
-        return "NSP12-" + str(int((i - 13467) / 3) + 10) + '-' + frame_shift
-            # RNA-dependent RNA polymerase
-    elif (16236<=i<18039):
-        return "NSP13-" + str(int((i - 16236) / 3) + 1)  + '-' + frame_shift
-            # Helicase
-    elif (18039<=i<19620):
-        return "NSP14-" + str(int((i - 18039) / 3) + 1)  + '-' + frame_shift
-            # 3' - 5' exonuclease
-    elif (19620<=i<20658):
-        return "NSP15-" + str(int((i - 19620) / 3) + 1)  + '-' + frame_shift
-            # endoRNAse
-    elif (20658<=i<21552):
-        return "NSP16-" + str(int((i - 20658) / 3) + 1)  + '-' + frame_shift
-            # 2'-O-ribose methyltransferase
-    elif (21562<=i<25384):
-        return "S-"     + str(int((i - 21562) / 3) + 1)  + '-' + frame_shift
-    elif (28273<=i<29533):
-        return "N-"     + str(int((i - 28273) / 3) + 1)  + '-' + frame_shift
-    elif (29557<=i<29674):
-        return "ORF10-" + str(int((i - 29557) / 3) + 1)  + '-' + frame_shift
-    elif (26522<=i<27191):
-        return "M-"     + str(int((i - 26522) / 3) + 1)  + '-' + frame_shift
-    elif (27893<=i<28259):
-        return "ORF8-"  + str(int((i - 27893) / 3) + 1)  + '-' + frame_shift
-    else:
-        return "NC-"    + str(int(i))
-
-
-def get_codon_start_index(i):
-    """ Given a sequence index i, determine the index of the first nucleotide in the codon. """
-    if   (13467<=i<=21554):
-        return i - (i - 13467)%3
-    elif (25392<=i<=26219):
-        return i - (i - 25392)%3
-    elif (26244<=i<=26471):
-        return i - (i - 26244)%3
-    elif (27201<=i<=27386):
-        return i - (i - 27201)%3
-    elif (27393<=i<=27886):
-        return i - (i - 27393)%3
-    elif (  265<=i<=13467):
-        return i - (i - 265  )%3
-    elif (21562<=i<=25383):
-        return i - (i - 21562)%3
-    elif (28273<=i<=29532):
-        return i - (i - 28273)%3
-    elif (29557<=i<=29673):
-        return i - (i - 29557)%3
-    elif (26522<=i<=27190):
-        return i - (i - 26522)%3
-    elif (27893<=i<=28258):
-        return i - (i - 27893)%3
-    else:
-        return 0
     
     
 def find_frequencies_linked(linked_sites, single, double, alleles):
     """ Find and return the single and the double site frequencies for all sites in each group of linked sites"""
     
-    nucs        = [get_label_orf(i) for i in alleles]
+    nucs        = [dp.get_label_orf(i) for i in alleles]
     single_freq = []
     double_freq = []
     new_sites   = []
@@ -390,10 +289,12 @@ def main(args):
     parser.add_argument('--g1',          type=float,  default=1,                       help='regularization restricting the magnitude of the selection coefficients')
     parser.add_argument('--freq_cutoff', type=float,  default=0.05,                    help='if a mutant frequency never rises above this number, it will not be used for inference')
     parser.add_argument('--link_tol',    type=float,  default=0.9,                     help='the tolerance for correlation check used for determining linked sites')
+    parser.add_argument('--minCounts',   type=int,    default=10,                      help='the minimum number of times a mutation must be observed in order to be added to groups of linked sites')
     parser.add_argument('--c_directory', type=str,    default='Archive-alt2',          help='directory containing the c++ scripts')
     parser.add_argument('--timed',       type=int,    default=0,                       help='whether or not the program is timed')
     parser.add_argument('-w',            type=int,    default=10,                      help='the window size')
     parser.add_argument('-q',            type=int,    default=1,                       help='the number of states at each site')
+    parser.add_argument('--refFile',     type=str,    default=None,                    help='the file containing the reference sequence and site indices')
     #parser.add_argument('--find_linked_anywhere', action='store_true', default=False,  help='whether or not to find sites that are linked in any region')
     parser.add_argument('--findLinkedRegional', action='store_true', default=False,  help='whether or not to find sites are linked in each region')
     parser.add_argument('--multisite',            action='store_true', default=False,  help='whether or not to to use multiple states at the same site')
@@ -419,7 +320,8 @@ def main(args):
         if not os.path.exists(arg_list.out_dir):
             os.mkdir(arg_list.out_dir)
     else:
-        link_outfile = out_str.split('/')[-1]
+        #link_outfile = out_str.split('/')[-1]
+        link_outfile = out_str
         out_dir      = ''
     
     simulations = len([name for name in os.listdir(directory_str)]) # number of locations to be combined
@@ -546,10 +448,18 @@ def main(args):
     if timed > 0:
         t_elimination = timer()
         print("starting")
+        
+    # loading reference sequence index
+    ref_index = pd.read_csv(arg_list.refFile)
+    index     = list(ref_index['ref_index'])
+    index     = [str(i) for i in index]
+    ref_full  = list(ref_index['nucleotide'])
     
     # Loading and organizing the data from the different locations. Combining it into new arrays.
-    allele_number, mutant_sites_full = [], []
+    mutant_sites_full = []
     filepaths = []
+    ref_sites = []
+    locations_tot = []
     directory = os.fsencode(directory_str)
     for file in sorted(os.listdir(directory)):
         
@@ -559,30 +469,37 @@ def main(args):
         location = filename[:-4]
         filepaths.append(filepath)
         print2(f'\tloading location {location}')
-        data   = np.load(filepath, allow_pickle=True)  # Genome sequence data
-        labels = data['allele_number']                # The genome locations of mutations
+        data      = np.load(filepath, allow_pickle=True)  # Genome sequence data
+        labels    = data['allele_number']                # The genome locations of mutations
+        ref_sites.append(np.array(data['ref_sites'], dtype=str))
+        locations_tot.append(location)
         
         # Append location specific information to lists.
-        mutant_sites_full.append(np.array(labels))
+        mutant_sites_full.append(np.array(labels, dtype=str))
     
     # Finds all sites at which there are mutations
     #mutant_sites_all = np.sort(np.unique(np.array([mutant_sites_full[i][j] for i in range(len(mutant_sites_full)) for j in range(len(mutant_sites_full[i]))])))
     
     # Filter sites with too low of a frequency in every population. 
-    #allele_number = np.sort(np.array(allele_number))  # The sites
-    #mutant_sites_tot, sVec_full = filter_sites_alternative(sVec_full, nVec_full, mutant_sites_full, allele_number) # The sequences with these sites removed
-    mutant_sites_tot = mutant_sites_full
+    #mutant_sites_all = np.sort(np.unique(np.array([mutant_sites_full[i][j] for i in range(len(mutant_sites_full)) for j in range(len(mutant_sites_full[i]))])))
     mutant_sites_all = np.sort(np.unique(np.array([mutant_sites_full[i][j] for i in range(len(mutant_sites_full)) for j in range(len(mutant_sites_full[i]))])))
-    allele_number    = np.sort(np.unique(np.array([mutant_sites_full[i][j] for i in range(len(mutant_sites_full)) for j in range(len(mutant_sites_full[i]))])))
+    mutant_sites_tot = ref_sites
+    alleles_temp  = list(np.unique([ref_sites[i][j] for i in range(len(ref_sites)) for j in range(len(ref_sites[i]))]))
+    allele_number = []
+    ref_poly      = []
+    for i in range(len(index)):
+        if index[i] in alleles_temp:
+            allele_number.append(index[i])
+            ref_poly.append(ref_full[i])
     print2("number of inferred coefficients is {mutants} out of {mutants_all} total".format(mutants=len(allele_number), mutants_all=len(mutant_sites_all)))
     
     L             = len(allele_number)
     single_counts = np.zeros(L * q)     # The number of genomes with a mutation at each site across all populations
     double_counts = np.zeros((L * q, L * q)) # The double counts
     
-    ref_seq, ref_tag  = get_MSA(REF_TAG +'.fasta')
-    ref_seq  = list(ref_seq[0])
-    ref_poly = np.array(ref_seq)[allele_number]
+    #ref_seq, ref_tag  = get_MSA(REF_TAG +'.fasta')
+    #ref_seq  = list(ref_seq[0])
+    #ref_poly = np.array(ref_seq)[allele_number]
    
     if timed > 0:
         tracker = 0
@@ -607,7 +524,8 @@ def main(args):
         
         # Combine the single and double counts for this location into the overall ones
         alleles_sorted = np.argsort(allele_number)
-        positions      = np.searchsorted(allele_number[alleles_sorted], mutant_sites)
+        positions      = np.searchsorted(np.array(allele_number)[alleles_sorted], ref_sites[sim])
+        positions      = alleles_sorted[positions]
         for i in range(len(mutant_sites)):
             single_counts[positions[i] * q : (positions[i] + 1) * q] += single_temp[i * q : (i + 1) * q]
             double_counts[positions[i] * q : (positions[i] + 1) * q, positions[i] * q : (positions[i] + 1) * q] += double_temp[i * q : (i + 1) * q, i * q : (i + 1) * q]
@@ -642,15 +560,19 @@ def main(args):
                 
         # Find pairs linked in this region
         if find_linked_anywhere or find_linked_regional:
-            ref_poly_region = np.array(ref_seq)[mutant_sites]
+            ref_poly_region = []
+            for i in range(len(index)):
+                if index[i] in mutant_sites:
+                    ref_poly_region.append(ref_full[i])
+            assert(len(ref_poly_region)==len(mutant_sites))
         if multisite:
             mutant_sites_new = []
             for i in range(len(mutant_sites)):
                 for j in range(q):
-                    mutant_sites_new.append(get_label(mutant_sites[i]) + '-' + NUC[j])
+                    mutant_sites_new.append(dp.get_label_new(mutant_sites[i] + '-' + NUC[j]))
             mutant_sites = mutant_sites_new
         if find_linked_anywhere or find_linked_regional:
-            link_pairs_regional = find_linked_pairs_region(single_temp, double_temp, mutant_sites_new, freq_max, link_pairs_anywhere, ref_poly=ref_poly_region, q=q, tol=link_tol) 
+            link_pairs_regional = find_linked_pairs_region(single_temp, double_temp, mutant_sites_new, link_pairs_anywhere, ref_poly=ref_poly_region, q=q, tol=link_tol) 
             if find_linked_anywhere:
                 for pair in link_pairs_regional:
                     if pair not in link_pairs_anywhere:
@@ -677,7 +599,7 @@ def main(args):
                 allele_new.append(str(allele_number[i]) + '-' + NUC[j])
         allele_number = allele_new
     
-    linked_full = find_linked_pairs(single_counts, double_counts, allele_number, ref_poly=ref_poly, tol=link_tol, q=q)
+    linked_full = find_linked_pairs(single_counts, double_counts, allele_number, ref_poly=ref_poly, tol=link_tol, q=q, min_counts=arg_list.minCounts)
     print2('number of nonunique linked pairs:', len(linked_full))
     if timed > 0:
         t_pairs = timer()
@@ -692,19 +614,19 @@ def main(args):
     
     #linked_muts  = find_linked_groups_alt(single_counts, double_counts, allele_number, tol=link_tol)
     if not multisite:
-        linked_sites = [[get_label(i) for i in linked_muts[j]] for j in range(len(linked_muts))]
+        linked_sites = [[dp.get_label(i) for i in linked_muts[j]] for j in range(len(linked_muts))]
     
     if find_linked_anywhere:
         linked_groups_anywhere = combine_linked_sites2(link_pairs_anywhere)
         if not multisite:
-            linked_anywhere_sites  = [[get_label(i[:-2]) + '-' + i[-1] for i in linked_groups_anywhere[j]] for j in range(len(linked_groups_anywhere))]
+            linked_anywhere_sites  = [[dp.get_label(i[:-2]) + '-' + i[-1] for i in linked_groups_anywhere[j]] for j in range(len(linked_groups_anywhere))]
             np.save(link_outfile+'-anywhere-alleles.npy', linked_groups_anywhere)
             np.save(link_outfile+'-anywhere.npy', linked_anywhere_sites)
         else:
             np.save(link_outfile+'-anywhere.npy', linked_groups_anywhere)
     
     if find_linked_regional:
-        np.save(link_outfile + '-regional.npy', link_sites_regional)
+        np.savez_compressed(link_outfile + '-regional.npz', link_sites_regional=link_sites_regional, locations=locations_tot)
         
     # save the solution 
     if not multisite:
@@ -716,12 +638,12 @@ def main(args):
         for group in linked_muts:
             new_group = []
             for j in group:
-                new_site = get_label(j[:j.find('-')]) + '-' + j[-1]
+                new_site = dp.get_label_new(j)
                 new_group.append(new_site)
             linked_sites.append(new_group)
         np.save(link_outfile+'.npy', linked_sites)
     
-    np.savez_compressed(os.path.join(out_dir, 'nucleotide-counts.npz'), allele_number=allele_number, counts=single_counts)
+    #np.savez_compressed(os.path.join(out_dir, 'nucleotide-counts.npz'), allele_number=allele_number, counts=single_counts)
     
     if timed > 0:
         end_time = timer()

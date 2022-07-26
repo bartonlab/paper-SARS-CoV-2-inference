@@ -215,7 +215,7 @@ def main(args):
     #np.savez_compressed(os.path.join(INF_DIR, f'inf-data-nonsynonymous-{DATA_DATE}-1pct.npz'), allele_number=alleles, 
     #                    traj=traj, mutant_sites=mutants, numerator=numerator, covar_int=covar_int, counts=counts)
     
-    g1 *= np.mean(N) * np.mean(k) np.mean(R) / (np.mean(R) + np.mean(k))  # The regularization
+    g1 *= np.mean(N) * np.mean(k) / (1 + (np.mean(k) / np.mean(R)))  # The regularization
     print2('regularization: \t', g1)
    
     if timed > 0:
@@ -307,7 +307,6 @@ def main(args):
     print(len(types))
     print(len(alleles))
     # Eliminating the remaining synonymous mutations and mutations that don't appear in the data
-    ### THERE APPEARS TO BE AN ISSUE WITH THIS PART ###
     mask      = np.nonzero(np.logical_and(types=='NS', counts>cutoff))[0]
     alleles   = alleles[mask]
     selection = selection[mask]

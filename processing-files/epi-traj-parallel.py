@@ -19,6 +19,135 @@ import shutil
 REF_TAG = 'EPI_ISL_402125'
 NUC     = ['-', 'A', 'C', 'G', 'T']
 
+def find_site_index_file(filepath):
+    """ Given a sequence file find the correct corresponding file that has the site names"""
+    directory, file = os.path.split(filepath)
+    return filepath[:-4] + '-sites.csv'
+
+
+def find_counts_window(counts, window):
+    ret = np.cumsum(counts, axis=0)
+    ret[window:] = ret[window:] - ret[:-window]
+    result = ret[window - 1:]
+    return result
+
+def moving_average(freq, window=9):
+    """ Calculates a moving average for a frequency array. """
+    ret = np.cumsum(freq, axis=0)
+    ret[window:] = ret[window:] - ret[:-window]
+    result = ret[window - 1:] / window
+    return result
+
+def get_data(file, get_seqs=True):
+    """ Given a sequence file, get the sequences, dates, and mutant site labels"""
+    print('sequence file\t', file)
+    #data = pd.read_csv(file, engine='python', converters={'sequence': lambda x: str(x)})
+    data = pd.read_csv(file, engine='python', dtype={'sequence': str})
+    #if not get_seqs:
+    #    sequences = None
+    #else:
+    #    sequences   = np.array([np.array(list(str(i)), dtype=int) for i in list(data['sequence'])])
+    #    seq_lens, seq_counts = np.unique([len(i) for i in sequences], return_counts=True)
+    #    print(f'sequence lengths are {seq_lens}')
+    #    print(f'number of sequences with each length {seq_counts}')
+    #    common_len = seq_lens[np.argmax(seq_counts)]
+    #    mask  = [i for i in range(len(sequences)) if len(sequences[i])==common_len]
+    dates     = list(data['date'])
+    sub_dates = list(data['submission_date'])
+    index_file = find_site_index_file(file)
+    index_data = pd.read_csv(index_file)
+    ref_sites  = list(index_data['ref_sites'])
+    if get_seqs:
+        sequences   = np.array([np.array(list(str(i)), dtype=int) for i in list(data['sequence'])])
+        seq_lens, seq_counts = np.unique([len(i) for i in sequences], return_counts=True)
+        print(f'sequence lengths are {seq_lens}')
+        print(f'number of sequences with each length {seq_counts}')
+        common_len = seq_lens[np.argmax(seq_counts)]
+        mask       = [i for i in range(len(sequences)) if len(sequences[i])==common_len]
+        dates      = list(np.array(dates)[mask])
+        sub_dates  = list(np.array(sub_dates)[mask])
+        sequences  = sequences[mask]
+        assert(len(ref_sites)==common_len)
+    else:
+        sequences = None
+    dic = {
+        'ref_sites' : ref_sites,
+        'sequences' : sequences,
+        'dates' : dates,
+        'submission_dates' : sub_dates
+    }
+    return dic
+
+
+def find_freqs(file, window=10, d=5):
+    """ Finds the maximum frrequency that mutant alleles at each site reach."""
+    df                = pd.read_csv(file, dtype={'sequence' : str})
+    data              = get_data(file)
+    sequences         = data['sequences']
+    ref_sites         = data['ref_sites']
+    dates             = data['dates']
+    filename          = os.path.basename(file)
+    sequences         = np.array([list(i) for i in sequences], dtype=int)
+    #site_idxs = [ref_labels.index(str(i)) for i in ref_sites]
+    #ref_poly  = np.array(ref_seq)[np.array(site_idxs)]
+    
+    # Better code for doing this
+    unique_dates, num_seqs = np.unique(dates, return_counts=True)
+    all_dates = np.arange(np.amin(unique_dates), np.amax(unique_dates) + 1)
+    n_seqs    = np.zeros(len(all_dates))
+    for i in range(len(all_dates)):
+        if all_dates[i] in unique_dates:
+            n_seqs[i] += num_seqs[list(unique_dates).index(all_dates[i])]
+    num_seqs = n_seqs
+    unique_dates = all_dates
+    min_seqs    = 100
+    if window >= len(unique_dates) / 2:
+        window = int(len(unique_dates) / 2)
+    if np.amin(num_seqs) > min_seqs:
+        window = 0
+    #window_test = 1
+    #while np.amin(find_counts_window(num_seqs, window_test)) < min_seqs and window_test < window:
+    #    window_test += 1
+    #window = window_test
+    counts_tot = np.zeros((len(unique_dates), len(ref_sites) * d))
+    for t in range(len(unique_dates)):
+        idxs   = np.where(dates==unique_dates[t])[0]
+        seqs_t = sequences[idxs]
+        for i in range(len(ref_sites)):
+            for j in range(len(seqs_t)):
+                counts_tot[t, (i * d) + seqs_t[j][i]] += 1
+    if window!=0:           
+        ret = np.cumsum(counts_tot, axis=0)
+        ret[window:] = ret[window:] - ret[:-window]
+        result = ret[window - 1:]
+        
+        # Find total number of sequences in each window from num_seqs
+        n_seqs = np.zeros(len(result))
+        for i in range(len(result)):
+            n_temp = 0
+            for j in range(window):
+                n_temp += num_seqs[i + j]
+            n_seqs[i] += n_temp
+            
+        counts_tot   = result
+        num_seqs     = n_seqs
+        unique_dates = unique_dates[window - 1:]
+        
+    #counts = np.sum(counts_tot, axis=0)
+    #freq = freqs_from_counts(counts_tot, num_seqs)
+    new_labels = []
+    for i in ref_sites:
+        for j in NUC:
+            new_labels.append(str(i) + '-' + j)
+            
+    freq = np.array([counts_tot[i] / num_seqs[i] for i in range(len(counts_tot))])
+    dic  = {'time' : unique_dates}
+    for i in range(len(new_labels)):
+        dic[new_labels[i]] = freq[:, i]
+    df = pd.DataFrame.from_dict(dic)
+    return df
+    
+
 
 def get_MSA(ref, noArrow=True):
     """Take an input FASTA file and return the multiple sequence alignment, along with corresponding tags. """
@@ -141,8 +270,6 @@ def main(args):
     parser.add_argument('--delay',       type=int,    default=None,                    help='the delay between the newly infected individuals and the individuals that ')
     parser.add_argument('--mutation_on',    action='store_true', default=False,  help='whether or not to include mutational term in inference')
     parser.add_argument('--cutoff_on',      action='store_true', default=False,  help='whether or not to cutoff frequencies below freq_cutoff')
-    parser.add_argument('--find_linked',    action='store_true', default=False,  help='whether or not to find the sites that are (almost) fully linked')
-    parser.add_argument('--find_counts',    action='store_true', default=False,  help='whether to find the single and double site counts instead of the frequencies, mostly used for finding linked sites')
     
     arg_list = parser.parse_args(args)
     
@@ -160,7 +287,7 @@ def main(args):
     final_time    = arg_list.final_t
     decay_rate    = arg_list.decay_rate
     delay         = arg_list.delay
-    data          = np.load(arg_list.data, allow_pickle=True)
+    #data          = np.load(arg_list.data, allow_pickle=True)
     
     if not os.path.exists(out_str):
         os.mkdir(out_str)
@@ -172,226 +299,6 @@ def main(args):
         identifier = identifier[-1]
     else:
         identifier = identifier[0]
-    
-    # Load the inflowing sequence data if it is known
-    if arg_list.inflow:
-        inflow_data  = np.load(arg_list.inflow, allow_pickle=True) # sequences that flow migrate into the populations
-        in_counts    = inflow_data['counts']        # the number of each sequence at each time
-        in_sequences = inflow_data['sequences']     # the sequences at each time
-        in_locs      = inflow_data['locations']     # the locations that the sequences flow into
-        ### The below only works if a constant population size is used and a single region has inflowing population###
-        pop_in       = [np.sum(in_counts[0][i] / np.mean(pop_size)) for i in range(len(in_counts[0]))]  # the total number of inflowing sequences at each time
-        #print(pop_in)
-        
-    
-    def trajectory_calc(nVec, sVec, mutant_sites_samp, d=q):
-        """ Calculates the frequency trajectories"""
-        Q = np.ones(len(nVec))
-        for t in range(len(nVec)):
-            if len(nVec[t]) > 0:
-                Q[t] = np.sum(nVec[t])
-        single_freq_s = np.zeros((len(nVec), len(mutant_sites_samp) * d))
-        print(np.shape(single_freq_s))
-        for t in range(len(nVec)):
-            for i in range(len(mutant_sites_samp)):
-                for j in range(len(sVec[t])):
-                    single_freq_s[t, i * d + sVec[t][j][i]] += nVec[t][j] / Q[t]
-        return single_freq_s
-    
-    
-    def allele_counter(nVec, sVec, mutant_sites_samp, d=q):
-        """ Calculates the counts for each allele at each time. """
-    
-        single = np.zeros((len(nVec), len(mutant_sites_samp) * d))
-        for t in range(len(nVec)):
-            for i in range(len(mutant_sites_samp)):
-                for j in range(len(sVec[t])):
-                    single[t, i * d + sVec[t][j][i]] += nVec[t][j]
-        return single
-                
-    
-    def allele_counter_in(sVec_in, nVec_in, mutant_sites, traj, pop_in, N, k, R, T, d=q):
-        """ Counts the single-site frequencies of the inflowing sequences"""
-        
-        if isinstance(N, int) or isinstance(N, float):
-            popsize = N * np.ones(T)
-        else:
-            popsize = N
-        single_freq = np.zeros((T, d * len(sVec_in[0][0])))
-        for t in range(T):
-            for i in range(len(sVec_in[0][0])):
-                for j in range(len(sVec_in[t])):
-                    single_freq[t, i * d + sVec_in[t][j][i]] = nVec_in[t][j] / popsize[t]
-        coefficient = (1 / ((1 / (N * k)) + ((k / R) / (N * k - 1)))) * (1 / R)
-        if not isinstance(coefficient, float):
-            coefficient = coefficient[:-1]
-        term_2            = np.swapaxes(traj, 0, 1) * np.array(pop_in[:len(traj)]) / popsize
-        integrated_inflow = np.sum((np.swapaxes(single_freq, 0, 1) - term_2) * coefficient,  axis=1)
-        return integrated_inflow
-    
-    
-    def transfer_in(seqs1, counts1, seqs2, counts2):
-        """ Combine sequences transfered from another population with the current population"""
-        
-        for i in range(len(counts2)):
-            unique = True
-            for j in range(len(counts1)):
-                if seqs1[j] == seqs2[i]:
-                    unique = False
-                    counts1[j] += counts2[i]
-                    break
-            if unique:
-                seqs1.append(seqs2[i])
-                counts1.append(counts2[i])
-                
-    def transfer_in_alt(seqs1, counts1, seqs2, counts2):
-        """ Combine sequences transfered from another population with the current population"""
-        
-        for i in range(len(counts2)):
-            unique = True
-            for j in range(len(counts1)):
-                if (seqs1[j] == seqs2[i]).all():
-                    unique = False
-                    counts1[j] += counts2[i]
-                    break
-            if unique:
-                seqs1.append(seqs2[i])
-                counts1.append(counts2[i])
-                
-                
-    def add_previously_infected(nVec, sVec, popsize, decay_rate):
-        """ Adds previously infected individuals to the population at later dates."""
-        
-        def combine(nVec1, sVec1, nVec2, sVec2):
-            """ Combines sequence and count arrays at a specific time."""
-            sVec_new = [list(i) for i in sVec1]
-            nVec_new = [i for i in nVec1]
-            for i in range(len(sVec2)):
-                if list(sVec2[i]) in sVec_new:
-                    nVec_new[sVec_new.index(list(sVec2[i]))] += nVec2[i]
-                else:
-                    nVec_new.append(nVec2[i])
-                    sVec_new.append(list(sVec2[i]))
-            return nVec_new, sVec_new
-        
-        if type(popsize)==int or type(popsize)==float:
-            popsize = np.ones(len(nVec)) * popsize
-        new_nVec = [[i for i in nVec[0]]]
-        new_sVec = [[i for i in sVec[0]]]
-        for t in range(1, len(nVec)):
-            nVec_t = list(np.array([i for i in nVec[t]]) * popsize[t] / np.sum(nVec[t]))
-            sVec_t = [i for i in sVec[t]]
-            for t_old in range(t):
-                probability = np.exp(- decay_rate * (t - t_old)) * (1 - np.exp(- decay_rate))
-                old_nVec    = list(probability * np.array(nVec[t_old]) * popsize[t_old] / np.sum(nVec[t_old]))
-                old_sVec    = sVec[t_old]
-                nVec_temp   = []
-                sVec_temp   = []
-                for j in range(len(old_nVec)):
-                    if int(round(old_nVec[j]))>0:
-                        nVec_temp.append(old_nVec[j])
-                        sVec_temp.append(old_sVec[j])
-                nVec_t, sVec_t = combine(nVec_t, sVec_t, nVec_temp, sVec_temp)
-            new_nVec.append(nVec_t)
-            new_sVec.append(sVec_t)
-        return new_nVec, new_sVec
-    
-    
-    def combine(nVec1, sVec1, nVec2, sVec2):
-        """ Combines sequence and count arrays at a specific time."""
-        sVec_new = [list(i) for i in sVec1]
-        nVec_new = [i for i in nVec1]
-        for i in range(len(sVec2)):
-            if list(sVec2[i]) in sVec_new:
-                nVec_new[sVec_new.index(list(sVec2[i]))] += nVec2[i]
-            else:
-                nVec_new.append(nVec2[i])
-                sVec_new.append(list(sVec2[i]))
-        return nVec_new, sVec_new
-
-    
-    def moving_average(freq, window=9):
-        """ Calculates a moving average for a frequency array. """
-        ret = np.cumsum(freq, axis=0)
-        ret[window:] = ret[window:] - ret[:-window]
-        result = ret[window - 1:] / window
-        return result
-    
-    
-    def freqs_from_counts(freq, window=9):
-        """ Smooths the counts and then finds the total frequencies"""
-        ret = np.cumsum(freq, axis=0)
-        ret[window:] = ret[window:] - ret[:-window]
-        result = ret[window - 1:]
-        final  = []
-        for i in result:
-            final.append(i / np.sum(i))
-        final  = np.array(final)
-        return final
-    
-    
-    def gaussian_window(nVec, sVec, window, t):
-        """ Calculates the single and double site frequencies at a single time
-        by using a Gaussian window to smooth the actual frequencies at nearby times. 
-        NOT UPDATED TO WORK FOR MULTIPLE STATES AT EACH SITE"""
-        single = np.zeros((len(sVec[0][0])))
-        double = np.zeros((len(sVec[0][0], len(sVec[0][0]))))
-        gaussian = np.exp((- 1 / 2) * (((np.arange(window) - (window / 2))/ (0.5 * window / 2) ) ** 2))
-        norm = 0
-        for j in range(window):
-            norm += np.sum(nVec[t+j]) * gaussian[j]
-        for i in range(len(sVec[0][0])):
-            for j in range(window):
-                single[i] += gaussian[j] * np.sum([nVec[t+j][k] * sVec[t+j][k][i] for k in range(len(sVec[t+j]))]) / norm
-            for k in range(i+1, len(sVec[0][0])):
-                for j in range(window):
-                    double[i, k] += gaussian[j] * np.sum([nVec[t+j][l] * sVec[t+j][l][i] * sVec[t+j][l][k] for l in range(len(sVec[t+j]))]) / norm
-                    double[k, i] += gaussian[j] * np.sum([nVec[t+j][l] * sVec[t+j][l][i] * sVec[t+j][l][k] for l in range(len(sVec[t+j]))]) / norm
-        return single, double
-
-    
-    def get_codon_start_index(i, d=q):
-        """ Given a sequence index i, determine the codon corresponding to it. """
-        i = int(i/d)
-        if   (13467<=i<=21554):
-            return i - (i - 13467)%3
-        elif (25392<=i<=26219):
-            return i - (i - 25392)%3
-        elif (26244<=i<=26471):
-            return i - (i - 26244)%3
-        elif (27201<=i<=27386):
-            return i - (i - 27201)%3
-        elif (27393<=i<=27886):
-            return i - (i - 27393)%3
-        elif (  265<=i<=13482):
-            return i - (i - 265  )%3
-        elif (21562<=i<=25383):
-            return i - (i - 21562)%3
-        elif (28273<=i<=29532):
-            return i - (i - 28273)%3
-        elif (29557<=i<=29673):
-            return i - (i - 29557)%3
-        elif (26522<=i<=27190):
-            return i - (i - 26522)%3
-        elif (27893<=i<=28258):
-            return i - (i - 27893)%3
-        else:
-            return 0
-        
-        
-    def smooth_nvec(nVec, sVec, window):
-        """ Takes a moving average of nVec across the time series"""
-        nVec_new = []
-        sVec_new = []
-        for t in range(len(nVec) - window):
-            nVec_temp = [i for i in nVec[t]]
-            sVec_temp = [i for i in sVec[t]]
-            for i in range(1, window + 1):
-                nVec_temp, sVec_temp = combine(nVec_temp, sVec_temp, nVec[t+i], sVec[t+i])
-            nVec_new.append(nVec_temp)
-            sVec_new.append(sVec_temp)
-        return nVec_new, sVec_new
-              
             
     if timed > 0:
         t_start = timer()
@@ -407,6 +314,9 @@ def main(args):
     status_file = open(status_name, 'w')
     status_file.close()
     
+    #if os.path.exists(os.path.join(out_str, location + '.npz')):
+    #    sys.exit()
+    
     def print2(*args):
         """ Print the status of the processing and save it to a file."""
         stat_file = open(status_name, 'a+')
@@ -416,127 +326,22 @@ def main(args):
         stat_file.close()
         print(string)
     
-    # Load data
-    print2(f'\tloading location {location}')
-    data       = np.load(filepath, allow_pickle=True)  # Genome sequence data
-    nVec       = data['nVec']                        # The number of each genome for each time
-    sVec       = data['sVec']                        # The genomes for each time
-    times_temp = data['times']                       # The times 
-    labels     = data['mutant_sites']                # The genome locations of mutations
-        
-    # Cutoff some time points in the end and the beginning if told to
-    if end_cutoff > 0:
-        nVec       = nVec[:-end_cutoff]
-        sVec       = sVec[:-end_cutoff]
-        times_temp = times_temp[:-end_cutoff]
-    if start_cutoff > 0:
-        nVec       = nVec[start_cutoff:]
-        sVec       = sVec[start_cutoff:]
-        times_temp = times_temp[start_cutoff:]
+    # get data for the specific location
     location_data  = location.split('-')
     timestamps     = location_data[-6:]
     for i in range(len(timestamps)):
         if len(timestamps[i]) == 1:
             timestamps[i] = '0' + timestamps[i]
-    #print(timestamps)
-        
-    clip_length = len(labels) - len(labels[labels<clip_end])
-    if clip_length > 0:
-        labels      = labels[labels<clip_end]
-        sVec_temp   = []
-        for i in range(len(sVec)):
-            sVec_t = []
-            for j in range(len(sVec[i])):
-                sVec_t.append(sVec[i][j][:-clip_length])
-            sVec_temp.append(sVec_t)
-        labels = labels[labels<=clip_end]
-        sVec   = sVec_temp
-        
-    clip_length2 = len(labels) - len(labels[labels>clip_start])
-    if clip_length2 > 0:
-        labels      = labels[labels>clip_start]
-        sVec_temp   = []
-        for i in range(len(sVec)):
-            sVec_t = []
-            for j in range(len(sVec[i])):
-                sVec_t.append(sVec[i][j][clip_length2:])
-            sVec_temp.append(sVec_t)
-        labels = labels[labels>clip_start]
-        sVec   = sVec_temp
-        
-    if final_time:
-        days_end   = len(times_temp[times_temp>final_time])
-        if days_end > 0:
-            times_temp = times_temp[:-days_end]
-            nVec       = nVec[:-days_end]
-            sVec       = sVec[:-days_end]
-        elif days_end == len(times_temp):
-            times_temp, nVec, sVec = [], [[]], [[[]]]
-                
-    dates      = times_temp[(window - 1):]
-    dates_full = times_temp
-    lengths    = len(sVec[0][0])
-        
-    # Preprocessing of the time-varying population size to be used to correct for the non-markovian property of the disease spread
-    
-    # Finds all sites at which there are mutations
-    mutant_sites_full = [labels]
-    allele_number     = labels
-    
-    L = len(allele_number)
-    print2('number of sites:', L)
-        
-    # get data for the specific location
         
     region = location[:-22]
     if   region[-2:] == '--': region = region[:-2]
     elif region[-1]  =='-':   region = region[:-1]
-    if arg_list.inflow:
-        if region in list(in_locs):
-            ss_incounts = in_counts[list(in_locs).index(region)]     # Contains numbers of each sequence that migrates to the location for each time
-            ss_inseqs   = in_sequences[list(in_locs).index(region)]  # Contains containing the sequences migrating to this location for each time
-            #print(ss_incounts, ss_inseqs)
-    mutant_sites = labels    # The simulation specific site labels
-                
-    # Mask all sites in the list of sites given
-    if arg_list.mask_group:
-        ref_seq, ref_tag  = get_MSA(REF_TAG +'.fasta')
-        ref_seq           = list(ref_seq[0])
-        ref_poly          = np.array(ref_seq)[allele_number]
-        mutants    = [get_label(i) for i in allele_number]
-        mask_group = np.load(arg_list.mask_group, allow_pickle=True)
-        mask_sites = [i[:-2] for i in mask_group]
-        if np.any([i in mutants for i in mask_sites]):
-            mask_nucs  = [NUC.index(i[-1]) for i in mask_group]
-            mask_nums  = [allele_number[mutants.index(i)] for i in mask_sites]
-            ref_mask   = [NUC.index(i) for i in ref_poly[mask_nums]]
-            mask_idxs  = [mutants.index(i) for i in mask_sites]
-            for i in range(len(mask_group)):
-                if mask_nums[i] in list(mutant_sites):
-                    for j in range(len(sVec)):
-                        for k in range(len(sVec[i])):
-                            if sVec[j][k][mask_idxs[i]] == mask_nucs[i]:
-                                sVec[j][k][mask_idxs[i]] = ref_mask[i]
         
-    if arg_list.find_counts:
-        single_counts = allele_counter(nVec, sVec, labels, d=q)
-    else:
-        single_temp = trajectory_calc(nVec, sVec, mutant_sites, d=q)
-        single_site = moving_average(single_temp, window)
-    
-    allele_new = []
-    for i in range(len(allele_number)):
-        for j in range(q):
-            allele_new.append(str(allele_number[i]) + '-' + NUC[j])
-    allele_number = allele_new
-                        
-    g = open(os.path.join(out_str, location + '.npz'), mode='wb')
-    if arg_list.find_counts:
-        np.savez_compressed(g, counts=single_counts, times=dates, allele_number=allele_number)
-    else:
-        np.savez_compressed(g, traj=single_site, times=dates, times_full=dates_full, traj_nosmooth=single_temp,
-                            allele_number=allele_number)
-    g.close()
+    # make trajectories
+    df = find_freqs(arg_list.data, window=window)
+    filename = os.path.split(arg_list.data)[-1]
+    df.to_csv(os.path.join(out_str, filename), index=False)
+
         
     
 
