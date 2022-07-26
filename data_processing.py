@@ -1016,8 +1016,57 @@ def find_site_index_file(filepath):
     else:
         return filepath[:filepath.find('---')] + '-sites.csv' 
     
+      
+def calculate_selection(tv_inf_dir, link_file, cutoff=0.1318, start_date=None):
+    """Finds all individual sites and groups of linked sites that would be inferred to be larger than
+    the cutoff in any region at any time"""
+    linked_sites = np.load(link_file, allow_pickle=True)
+    linked_all   = [linked_sites[i][j] for i in range(len(linked_sites)) for j in range(len(linked_sites[i]))]
+    locations = []
+    s_large   = []
+    sites     = []
+    for file in os.listdir(tv_inf_dir):
+        data  = np.load(os.path.join(tv_inf_dir, file), allow_pickle=True)
+        s     = data['selection']
+        t_inf = data['time_infer']
+        muts  = [get_label_new(i) for i in data['allele_number']]
+        if start_date!=None:
+            if start_date > t_inf[-1]:
+                continue
+            elif start_date in t_inf:
+                s = s[list(t_inf).index(start_date):]
+        
+        muts_nolink = [i for i in muts if i not in linked_all]
+        s_link      = np.zeros((len(linked_sites), len(s)))
+        s_nolink    = np.zeros((len(muts_nolink),  len(s)))
+        for i in range(len(muts_nolink)):
+            s_nolink[i] += s[:, muts.index(muts_nolink[i])]
+        for i in range(len(linked_sites)):
+            for j in range(len(linked_sites[i])):
+                if linked_sites[i][j] in muts:
+                    s_link[i] += s[:, muts.index(linked_sites[i][j])]
+        s_link   = np.amax(s_link, axis=1)
+        s_nolink = np.amax(s_nolink, axis=1)
+        
+        # masking out mutations and groups with selection coefficient smaller than cutoff
+        link_mask = s_link >= cutoff
+        muts_link = np.array(linked_sites)[link_mask]
+        s_link_large = s_link[link_mask]
+        for i in range(len(muts_link)):
+            locations.append(file[:-4])
+            sites.append(muts_link[i])
+            s_large.append(s_link_large[i])
+        nolink_mask = s_nolink >= cutoff
+        muts_nolink = np.array(muts_nolink)[nolink_mask]
+        s_nolink_large = s_nolink[nolink_mask]
+        for i in range(len(muts_nolink)):
+            locations.append(file[:-4])
+            sites.append(muts_nolink[i])
+            s_large.append(s_nolink_large[i])
+    return locations, sites, s_large
+
     
-def calculate_selection(tv_inf_dir, link_file, cutoff=0.1318, start_date=None, elim_prior=False):
+def calculate_selection2(tv_inf_dir, link_file, cutoff=0.1318, start_date=None, elim_prior=False):
     """Finds all individual sites and groups of linked sites that would be inferred to be larger than
     the cutoff in any region at any time"""
     linked_sites = np.load(link_file, allow_pickle=True)
@@ -1094,7 +1143,7 @@ def calculate_selection(tv_inf_dir, link_file, cutoff=0.1318, start_date=None, e
             locations.append(file[:-4])
             sites.append(muts_nolink[i])
             s_large.append(s_nolink_large[i])
-    return locations, sites, s_large
+    return locations, sites, s_large    
     
 
 def find_intervals(in_file, window=5, min_seqs=20, max_dt=5, min_range=20, end_cutoff=3):

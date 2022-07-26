@@ -326,7 +326,7 @@ def main(args):
             for i in range(len(sVec_in[0][0])):
                 for j in range(len(sVec_in[t])):
                     single_freq[t, i * d + sVec_in[t][j][i]] = nVec_in[t][j] / popsize[t]
-        coefficient = (N * k * R / (R + k)) * (1 / R)
+        coefficient = (1 / ((1 / (N * k)) + ((k / R) / (N * k - 1)))) * (1 / R)
         if not isinstance(coefficient, float):
             coefficient = coefficient[:-1]
         term_2            = np.swapaxes(traj, 0, 1) * np.array(pop_in[:len(traj)]) / popsize
@@ -474,7 +474,7 @@ def main(args):
         for t in range(window):
             transfer_in_alt(sVec_start, nVec_start, list(sVec[t]), list(nVec[t]))
             transfer_in_alt(sVec_end, nVec_end, list(sVec[-1-t]), list(nVec[-1-t]))
-        coeff1 =  N_ss * k_ss * R_ss / (R_ss + k_ss)
+        coeff1 = (1 / ((1 / (N_ss * k_ss)) + ((k_ss / R_ss) / (N_ss * k_ss - 1))))
         for i in range(len(sVec[0][0])):
             for j in range(len(sVec_start)):
                 beginning[i * d + sVec_start[j][i]] += coeff1 * nVec_start[j] / np.sum(nVec_start)
@@ -485,7 +485,7 @@ def main(args):
     
     def calculate_deltax_tv(nVec, sVec, k_ss, R_ss, N_ss, mut_sites, window):
         """ Integrates the change in frequency over the time series allowing parameters to be time-varying. """
-        coeff1 =  N_ss * k_ss * R_ss / (R_ss + k_ss)
+        coeff1 = (1 / ((1 / (N_ss * k_ss)) + ((k_ss / R_ss) / (N_ss * k_ss - 1))))
         single_site = trajectory_calc(nVec, sVec, mut_sites)
         #delta_x     = np.zeros(single_site[0])
         #for i in range(1, len(nVec)):
@@ -507,7 +507,7 @@ def main(args):
                 else:                        single_freq[t] += probability * np.array(single_new[t_old]) * nm_pop 
             single_freq[t] = single_freq[t] / np.sum(single_freq[t])
         delta_x = np.zeros(np.shape(single_new))
-        coeff1  =  N_ss * k_ss * R_ss / (R_ss + k_ss)
+        coeff1  = (1 / ((1 / (N_ss * k_ss)) + ((k_ss / R_ss) / (N_ss * k_ss - 1))))
         for i in range(1, len(nVec)):
             delta_x[:, i] = (single_new[:, i] - single_freq[:, i-1])
         delta_int = np.sum(np.swapaxes(delta_x, 0, 1) * coeff1, axis=1)
@@ -520,7 +520,7 @@ def main(args):
         nVec_new, sVec_new = add_previously_infected(nVec, sVec, nm_pop, decay_rate)
         single_freq        = np.swapaxes(trajectory_calc(nVec_new, sVec_new, mut_sites), 0, 1)
         delta_x            = np.zeros(np.shape(single_new))
-        coeff1             =  N_ss * k_ss * R_ss / (R_ss + k_ss)
+        coeff1             = (1 / ((1 / (N_ss * k_ss)) + ((k_ss / R_ss) / (N_ss * k_ss - 1))))
         for i in range(1, len(nVec)):
             delta_x[i] = single_new[i] - single_freq[i-1]
         delta_int = np.sum(delta_x * coeff1, axis=1)
@@ -606,8 +606,6 @@ def main(args):
     labels     = data['mutant_sites']                # The genome locations of mutations
     if 'ref_sites' in data:
         ref_sites = data['ref_sites']
-    else:
-        ref_sites = np.zeros(len(labels))
     #print(labels)
     print(times_temp)
     print('lengths of times and nVec', len(times_temp), len(nVec))
