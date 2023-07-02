@@ -1254,9 +1254,12 @@ def plot_a222v(trajectory_file, alpha_file, eu1_file, variant_id, selection_file
     plt.close(fig)
 
 
-def plot_early_detection(null_file, alpha_file, alpha_start, alpha_end, delta_file, delta_start, delta_end):
+def plot_early_detection(null_file, alpha_file, alpha_start, alpha_end, delta_file, delta_start, delta_end, plot_voc=False):
     """ Plot the null distribution for mutations inferred to be nearly neutral.
         Plot frequencies and early detection times for Alpha and Delta variants. """
+    
+    # Dates declared VOC's
+    voc_dates = {'delta' : '2021-05-06', 'alpha' : '2020-11-26', 'omicron' : '2021-11-26'}
     
     # Load data
     inferred_null = np.loadtxt(null_file)
@@ -4208,4 +4211,5 @@ def plot_variant_selection_old(variant_file, trajectory_file, variant_list=[], s
 
     plt.savefig('%s/fig-3%s' % (FIG_DIR, EXT), dpi = 1000, facecolor = fig.get_facecolor(), edgecolor=None, **FIGPROPS)
     plt.close(fig)
+
 

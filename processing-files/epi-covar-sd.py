@@ -19,8 +19,8 @@ def find_site_index_file(filepath):
     """ Given a sequence file find the correct corresponding file that has the site names"""
     directory, file = os.path.split(filepath)
     return filepath[:-4] + '-sites.csv'
-    
-    
+
+
 def get_data(file, get_seqs=True):
     """ Given a sequence file, get the sequences, dates, and mutant site labels"""
     print('sequence file\t', file)
@@ -62,14 +62,6 @@ def get_data(file, get_seqs=True):
     return dic
 
 
-def moving_average(freq, window=9):
-    """ Calculates a moving average for a frequency array. """
-    ret = np.cumsum(freq, axis=0)
-    ret[window:] = ret[window:] - ret[:-window]
-    result = ret[window - 1:] / window
-    return result
-
-
 def allele_counter(df, d=5):
     """ Calculates the counts for each allele at each time. """
     #df = df.astype({'sequences' : str})
@@ -99,141 +91,15 @@ def trajectory_calc(nVec, sVec, mutant_sites_samp, d=5):
     return single_freq_s
 
 
-def get_codon_start_index(i, d=5):
-    """ Given a sequence index i, determine the codon corresponding to it. """
-    i = int(i/d)
-    if   (13467<=i<=21554):
-        return i - (i - 13467)%3
-    elif (25392<=i<=26219):
-        return i - (i - 25392)%3
-    elif (26244<=i<=26471):
-        return i - (i - 26244)%3
-    elif (27201<=i<=27386):
-        return i - (i - 27201)%3
-    elif (27393<=i<=27886):
-        return i - (i - 27393)%3
-    elif (  265<=i<=13482):
-        return i - (i - 265  )%3
-    elif (21562<=i<=25383):
-        return i - (i - 21562)%3
-    elif (28273<=i<=29532):
-        return i - (i - 28273)%3
-    elif (29557<=i<=29673):
-        return i - (i - 29557)%3
-    elif (26522<=i<=27190):
-        return i - (i - 26522)%3
-    elif (27893<=i<=28258):
-        return i - (i - 27893)%3
-    else:
-        return 0
-
-
-def get_label(i, d=5):
-    """ For a SARS-CoV-2 reference sequence index i, return the label in the form 'coding region - protein number'. 
-    For example, 'ORF1b-204'."""
-    i_residue = str(i % d)
-    i = int(i) / d
-    frame_shift = str(i - get_codon_start_index(i))
-    if   (25392<=i<26220):
-        return "ORF3a-" + str(int((i - 25392) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (26244<=i<26472):
-        return "E-"     + str(int((i - 26244) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (27201<=i<27387):
-        return "ORF6-"  + str(int((i - 27201) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (27393<=i<27759):
-        return "ORF7a-" + str(int((i - 27393) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (27755<=i<27887):
-        return "ORF7b-" + str(int((i - 27755) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (  265<=i<805):
-        return "NSP1-"  + str(int((i - 265  ) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (  805<=i<2719):
-        return "NSP2-"  + str(int((i - 805  ) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif ( 2719<=i<8554):
-        return "NSP3-"  + str(int((i - 2719 ) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # Compound protein containing a proteinase, a phosphoesterase transmembrane domain 1, etc.
-    elif ( 8554<=i<10054):
-        return "NSP4-"  + str(int((i - 8554 ) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # Transmembrane domain 2
-    elif (10054<=i<10972):
-        return "NSP5-"  + str(int((i - 10054) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # Main proteinase
-    elif (10972<=i<11842):
-        return "NSP6-"  + str(int((i - 10972) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # Putative transmembrane domain
-    elif (11842<=i<12091):
-        return "NSP7-"  + str(int((i - 11842) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (12091<=i<12685):
-        return "NSP8-"  + str(int((i - 12091) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (12685<=i<13024):
-        return "NSP9-"  + str(int((i - 12685) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # ssRNA-binding protein
-    elif (13024<=i<13441):
-        return "NSP10-" + str(int((i - 13024) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # CysHis, formerly growth-factor-like protein
-    # Check that aa indexing is correct for NSP12, becuase there is a -1 ribosomal frameshift at 13468. It is not, because the amino acids in the first frame
-    # need to be added to the counter in the second frame.
-    elif (13441<=i<13467):
-        return "NSP12-" + str(int((i - 13441) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (13467<=i<16236):
-        return "NSP12-" + str(int((i - 13467) / 3) + 10) + '-' + frame_shift + '-' + i_residue
-            # RNA-dependent RNA polymerase
-    elif (16236<=i<18039):
-        return "NSP13-" + str(int((i - 16236) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # Helicase
-    elif (18039<=i<19620):
-        return "NSP14-" + str(int((i - 18039) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # 3' - 5' exonuclease
-    elif (19620<=i<20658):
-        return "NSP15-" + str(int((i - 19620) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # endoRNAse
-    elif (20658<=i<21552):
-        return "NSP16-" + str(int((i - 20658) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # 2'-O-ribose methyltransferase
-    elif (21562<=i<25384):
-        return "S-"     + str(int((i - 21562) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (28273<=i<29533):
-        return "N-"     + str(int((i - 28273) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (29557<=i<29674):
-        return "ORF10-" + str(int((i - 29557) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (26522<=i<27191):
-        return "M-"     + str(int((i - 26522) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (27893<=i<28259):
-        return "ORF8-"  + str(int((i - 27893) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    else:
-        return "NC-"    + str(int(i))
-
-
-def get_label_new(i):
-    nuc   = i[-1]
-    index = i.split('-')[0]
-    if index[-1] in NUMBERS:
-        return get_label(i[:-2]) + '-' + i[-1]
-    else:
-        if index[-1] in list(ALPHABET) and index[-2] in list(ALPHABET):
-            temp = get_label(index[:-2])
-            gap  = index[-2:]
-        elif index[-1] in list(ALPHABET):
-            temp = get_label(index[:-1])
-            gap  = index[-1]
-        else:
-            temp = get_label(index)
-            gap  = None
-        temp = temp.split('-')
-        if gap is not None:
-            temp[1] += gap
-            #print(temp, gap)
-        temp.append(nuc)
-        label = '-'.join(temp)
-        return label
-    
-    
-def find_start_time(df, delta_t=10, min_count=15):
+def find_start_time(df, delta_t=10, min_count=15, min_t=0):
     """Find the start time such that the next delta_t days after that time contain at least min_count sequences"""
     times     = list(df['times'])
     unique_t, counts = np.unique(times, return_counts=True)
     all_times  = []
     all_counts = []
     for t in np.arange(unique_t[0], unique_t[-1] + 1):
+        if t <= min_t:
+            continue
         all_times.append(t)
         if t in unique_t:
             all_counts.append(counts[list(unique_t).index(t)])
@@ -247,15 +113,17 @@ def find_start_time(df, delta_t=10, min_count=15):
         return None
     else:
         return all_times[idx[0]]
-    
-    
-def find_end_time(df, delta_t=10, min_count=15):
+
+
+def find_end_time(df, delta_t=10, min_count=15, min_t=0):
     """Find the start time such that the next delta_t days after that time contain at least min_count sequences"""
     times     = list(df['times'])
     unique_t, counts = np.unique(times, return_counts=True)
     all_times  = []
     all_counts = []
     for t in np.arange(unique_t[0], unique_t[-1] + 1):
+        if t <= min_t:
+            continue
         all_times.append(t)
         if t in unique_t:
             all_counts.append(counts[list(unique_t).index(t)])
@@ -284,13 +152,13 @@ def write_seq_file(seq_file, df):
     f.close()
 
 
-def run_mpl(N, q, seq_file, covar_dir, location, counts=False):
+def run_mpl(N, q, seq_file, covar_dir, location, counts=False, num=0):
     """ Run C++ code that calculates the covariance"""
     
-    covar_file  = f'covar-{location}.dat'
-    num_file    = f'num-{location}.dat'
-    out_file    = f'out-{location}.dat'
-    double_file = f'double-{location}.dat'
+    covar_file  = f'covar-{location}-{num}.dat'
+    num_file    = f'num-{location}-{num}.dat'
+    out_file    = f'out-{location}-{num}.dat'
+    double_file = f'double-{location}-{num}.dat'
     if os.path.exists(os.path.join(covar_dir, covar_file)):
         os.remove(os.path.join(covar_dir, covar_file))
         
@@ -346,40 +214,6 @@ def read_covariance(covar_path, time_varying=False, counts=False, tv_dir=None, l
     return np.array(covar_int, dtype=float)
 
 
-def no2index(nVec_t, no):
-    """ Find out what group a sampled individual is in (what sequence does it have) """
-    tmp_No2Index = 0
-    for i in range(len(nVec_t)):
-        tmp_No2Index += nVec_t[i]
-        if tmp_No2Index > no:
-            return i
-
-
-def sample_sequences(sVec, nVec, sample):
-    """ Sample a certain number of sequences from the whole population. """
-    if sample==0 or sample==None:
-        return sVec, nVec
-    sVec_sampled = []
-    nVec_sampled = []
-    num_seqs     = [np.sum(i) for i in nVec]
-    for t in range(len(nVec)):
-        if int(num_seqs[t])==0:
-            nVec_sampled.append(nVec[t])
-            sVec_sampled.append(sVec[t])
-            continue
-        nVec_tmp = []
-        sVec_tmp = []
-        nos_sampled = np.random.choice(num_seqs[t], sample, replace=True)
-        indices_sampled = [no2index(nVec[t], no) for no in nos_sampled]
-        indices_sampled_unique = np.unique(indices_sampled)
-        for i in range(len(indices_sampled_unique)):
-            nVec_tmp.append(np.sum([index == indices_sampled_unique[i] for index in indices_sampled]))
-            sVec_tmp.append(sVec[t][indices_sampled_unique[i]])
-        nVec_sampled.append(np.array(nVec_tmp))
-        sVec_sampled.append(np.array(sVec_tmp, dtype=object))
-    return sVec_sampled, nVec_sampled
-
-
 def allele_counter_in(sVec_in, nVec_in, mutant_sites, traj, pop_in, N, k, R, T, d=5):
     """ Counts the single-site frequencies of the inflowing sequences"""
     if isinstance(N, int) or isinstance(N, float):
@@ -422,19 +256,6 @@ def add_previously_infected(nVec, sVec, popsize, decay_rate):
         new_nVec.append(nVec_t)
         new_sVec.append(sVec_t)
     return new_nVec, new_sVec
-
-
-def combine(nVec1, sVec1, nVec2, sVec2):
-    """ Combines sequence and count arrays at a specific time."""
-    sVec_new = [list(i) for i in sVec1]
-    nVec_new = [i for i in nVec1]
-    for i in range(len(sVec2)):
-        if list(sVec2[i]) in sVec_new:
-            nVec_new[sVec_new.index(list(sVec2[i]))] += nVec2[i]
-        else:
-            nVec_new.append(nVec2[i])
-            sVec_new.append(list(sVec2[i]))
-    return nVec_new, sVec_new
 
 
 def freqs_from_counts(freq, num_seqs, window=5, min_seqs=200, hard_window=False):
@@ -489,6 +310,27 @@ def freqs_from_counts(freq, num_seqs, window=5, min_seqs=200, hard_window=False)
     return final
 
 
+def sample_sequences(df, sample):
+    """ Sample a certain number of sequences per time point from the total population"""
+    new_seqs  = []
+    new_times = []
+    rng       = np.random.default_rng()
+    
+    unique_times = np.unique(df['times'])
+    for t in unique_times:
+        df_temp = df[df['times']==t]
+        seqs    = list(df_temp['sequences'])
+        #times   = list(df_temp['times'])
+        idxs    = rng.choice(np.arange(len(seqs)), size=sample)
+        seqs    = np.array(seqs)[idxs]
+        #times   = np.array(times)[idxs]
+        for i in range(len(seqs)):
+            new_times.append(t)
+            new_seqs.append(seqs[i])
+    df = pd.DataFrame.from_dict({'sequences' : new_seqs, 'times' : new_times})
+    return df
+
+
 def main(args):
     """Calculate the covariance matrix and the trajectories for a single region from SARS-CoV-2 data"""
     
@@ -498,7 +340,6 @@ def main(args):
     parser.add_argument('-R',            type=float,  default=2,                       help='the basic reproduction number')
     parser.add_argument('-k',            type=float,  default=0.1,                     help='parameter determining shape of distribution of new infected')
     parser.add_argument('-q',            type=int,    default=5,                       help='number of mutant alleles per site')
-    parser.add_argument('--mu',          type=float,  default=0.,                      help='the mutation rate')
     parser.add_argument('--data',        type=str,    default=None,                    help='.npz files containing the counts, sequences, times, and mutant_sites for different locations')
     parser.add_argument('--scratch',     type=str,    default='scratch',               help='scratch directory to write temporary files to')
     parser.add_argument('--record',      type=int,    default=1,                       help='number of generations between samples')
@@ -519,12 +360,12 @@ def main(args):
     parser.add_argument('--decay_rate',  type=float,  default=0,                       help='the exponential decay rate used to correct for infection lasting multiple generations')
     parser.add_argument('--nm_popsize',  type=str,    default=None,                    help='.csv file containing the population sizes used to correct for infection lasting multiple generations')
     parser.add_argument('--delay',       type=int,    default=None,                    help='the delay between the newly infected individuals and the individuals that')
-    parser.add_argument('--trajectories',   action='store_true', default=False,  help='whether or not to save the trajectories')
+    parser.add_argument('--startTime',   type=int,    default=None,                    help='the first submission date to consider, in number of days after 2020-01-01')
+    parser.add_argument('--endTime',     type=int,    default=None,                    help='the last submission date to consider, in number of days after 2020-01-01')
     
     arg_list = parser.parse_args(args)
     
     out_str       = arg_list.o
-    mu            = arg_list.mu
     q             = arg_list.q
     record        = arg_list.record
     window        = arg_list.window
@@ -632,17 +473,18 @@ def main(args):
     print2('number of sites:', L)
         
     # get data for the specific location
-    region = location[:-22]
-    if   region[-2:] == '--': region = region[:-2]
-    elif region[-1]  ==  '-': region = region[:-1]
+    #region = location[:-22]
+    #if   region[-2:] == '--': region = region[:-2]
+    #elif region[-1]  ==  '-': region = region[:-1]
         
     # Load the sequences due to travel
-    if arg_list.inflow:
-        if region in list(in_locs):
-            ss_incounts = in_counts[list(in_locs).index(region)]     # Contains numbers of each sequence that migrates to the location for each time
-            ss_inseqs   = in_sequences[list(in_locs).index(region)]  # Contains containing the sequences migrating to this location for each time
+    #if arg_list.inflow:
+    #    if region in list(in_locs):
+    #        ss_incounts = in_counts[list(in_locs).index(region)]     # Contains numbers of each sequence that migrates to the location for each time
+    #        ss_inseqs   = in_sequences[list(in_locs).index(region)]  # Contains containing the sequences migrating to this location for each time
                 
     # Mask all sites in the list of sites given
+    """
     if arg_list.mask_group:
         ### NEED TO UPDATE TO DEAL WITH MULTIPLE ALLELES AT EACH SITE
         ref_file   = pd.read_csv('ref-index-short.csv')
@@ -667,6 +509,7 @@ def main(args):
                         for k in range(len(sVec[i])):
                             if sVec[j][k][mask_idxs[i]] == mask_nucs[i]:
                                 sVec[j][k][mask_idxs[i]] = ref_mask[i]
+    """
     # mask single site if given                            
     if arg_list.mask_site:
         # mask out 'mask_site' if there is one or multiple
@@ -678,26 +521,37 @@ def main(args):
                         
     # process the sequences that flow to this location from elsewhere, if they are known.
     ### DOES THIS NEED TO BE FIXED FOR MULTIPLE STATES AT EACH SITE?
-    if arg_list.inflow and not mask_site:
-        if region in list(in_locs):
-            traj_temp = trajectory_calc(nVec, sVec, ref_sites, d=q)
-            print2('number of time points in the region  \t', len(nVec))
-            print2('number of time points inflowing      \t', len(ss_incounts))
-            print2('number of time points in trajectories\t', len(traj_temp))
-            inflow_term = allele_counter_in(ss_inseqs, ss_incounts, ref_sites, traj_temp, pop_in, pop_size, k_ss, R, len(nVec)) # Calculates the correction due to migration
-            print2(f'region {region} present')
-        else:
-            inflow_term = np.zeros(len(ref_sites) * q)
-    else:
-        inflow_term = np.zeros(len(ref_sites) * q)
+    #if arg_list.inflow and not mask_site:
+    #    if region in list(in_locs):
+    #        traj_temp = trajectory_calc(nVec, sVec, ref_sites, d=q)
+    #        print2('number of time points in the region  \t', len(nVec))
+    #        print2('number of time points inflowing      \t', len(ss_incounts))
+    #        print2('number of time points in trajectories\t', len(traj_temp))
+    #        inflow_term = allele_counter_in(ss_inseqs, ss_incounts, ref_sites, traj_temp, pop_in, pop_size, k_ss, R, len(nVec)) # Calculates the correction due to migration
+    #        print2(f'region {region} present')
+    #    else:
+    #        inflow_term = np.zeros(len(ref_sites) * q)
+    #else:
+    #    inflow_term = np.zeros(len(ref_sites) * q)
+    inflow_term = np.zeros(len(ref_sites) * q)
     
     ### Run inference trimming the data by submission date
     if timed > 0:
         bootstrap_start_time = timer()
-        
+
     full_subdates = np.arange(np.amin(sub_dates), np.amax(sub_dates) + 1)
+    print2(f'submission date range is {full_subdates[0]} to {full_subdates[-1]}')
     for date in full_subdates:
         print2(f'submission date {date} processing')
+        
+        # Skip time point if the date is not between the input start and end dates
+        if arg_list.startTime is not None:
+            if date < arg_list.startTime:
+                continue
+        
+        if arg_list.endTime is not None:
+            if date >= arg_list.endTime:
+                continue
         
         # Skip time point if it is not at least 10 days after the first sequence was collected
         if date < dates_full[0] + 10:
@@ -714,11 +568,30 @@ def main(args):
             continue
         elif end_time - start_time <= delta_t:
             continue
+            
+        temp_end_time = end_time.copy()
+        end_times     = [end_time]
+        start_times   = [start_time]
+        while temp_end_time <= date:
+            new_start_time = find_start_time(df_temp, delta_t=delta_t, min_t=temp_end_time)
+            new_end_time   = find_end_time(df_temp, delta_t=delta_t, min_t=temp_end_time)
+            if new_start_time is None:
+                break
+                #temp_end_time == date
+            elif new_end_time - new_start_time <= delta_t:
+                pass
+            else:
+                start_times.append(new_start_time)
+                end_times.append(new_end_time)
+                temp_end_time = new_end_time
+        if len(start_times)>1:
+            print2(f'more than 1 time-series with good data')
+            print2(f'start times are {start_times}')
+            print2(f'end times are {end_times}')
         else:
-            df_temp = df_temp[df_temp['times']>=start_time]
-            df_temp = df_temp[df_temp['times']<=end_time]
-            print2(f'start time is {start_time}')
-            print2(f'end time is {end_time}')
+            print2(f'only 1 time series with good sampling')
+            print2(f'start times are {start_times[0]}')
+            print2(f'end times are {end_times[0]}')
         
         # skip calculation if there are less than 100 sequences in the dataframe
         if len(df_temp) < 100:
@@ -745,42 +618,61 @@ def main(args):
             
         df_temp = df_temp.sort_values(by=['times'], ignore_index=True)
         
-        # Write nVec and sVec to file
-        seq_file = f'seqs-{location}-{date}.dat'
-        seq_path = os.path.join(covar_dir, seq_file)
-        write_seq_file(seq_path, df_temp)
-    
-        stdout, stderr, exit_code = run_mpl(pop_size, q, seq_file, covar_dir, location, counts=False)
-        if exit_code != 0:
-            print2(exit_code)
-            print2(stdout)
-            print2(stderr)
+        # subsample 100 sequences per time
+        df_temp = sample_sequences(df_temp, 100)
         
-        # read in covariance file    
-        covar_file = f'covar-{location}.dat'
-        covar_path = os.path.join(covar_dir, covar_file)
-        covar_int  = read_covariance(covar_path) * coefficient / 5  
+        # Write nVec and sVec to file
+        covar_tot  = None
+        counts_tot = None
+        dates_tot  = None
+        for num in range(len(start_times)):
+            
+            df_t = df_temp[df_temp['times']>=start_times[num]]
+            df_t = df_temp[df_temp['times']<=end_times[num]]
+            #print2(f'start time is {start_times[num]}')
+            #print2(f'end time is {end_times[num]}')
+            
+            seq_file = f'seqs-{location}-{date}-{num}.dat'
+            seq_path = os.path.join(covar_dir, seq_file)
+            write_seq_file(seq_path, df_temp)
     
-        # delete files
-        #for file in [seq_file, f'covar-{location}.dat', f'num-{location}.dat', f'out-{location}.dat']:
-        #    if os.path.exists(os.path.join(covar_dir, file)):
-        #        os.remove(os.path.join(covar_dir, file))
-        #print2(ref_sites)
-        # calculate the frequencies
-        counts   = allele_counter(df_temp, d=q)
-        u_dates, num_seqs = np.unique(list(df_temp['times']), return_counts=True)
-        temp_dates = np.arange(np.amin(u_dates), np.amax(u_dates) + 1)
-        n_seqs = []
-        for i in range(len(temp_dates)):
-            if temp_dates[i] in u_dates:
-                n_seqs.append(num_seqs[list(u_dates).index(temp_dates[i])])
+            stdout, stderr, exit_code = run_mpl(pop_size, q, seq_file, covar_dir, location, counts=False, num=num)
+            if exit_code != 0:
+                print2(exit_code)
+                print2(stdout)
+                print2(stderr)
+        
+            # read in covariance file    
+            covar_file = f'covar-{location}-{num}.dat'
+            covar_path = os.path.join(covar_dir, covar_file)
+            covar_int  = read_covariance(covar_path) * coefficient / 5 
+            if covar_tot is None:
+                covar_tot = covar_int
             else:
-                n_seqs.append(0)
-        if 'england' in filepath:
-            counts = freqs_from_counts(counts, n_seqs, window=delta_t, min_seqs=min_seqs)
-        else:
-            counts = freqs_from_counts(counts, n_seqs, window=delta_t, min_seqs=min_seqs, hard_window=True)
-        dates = temp_dates[-len(counts):]
+                covar_tot += covar_int
+
+            # calculate the frequencies
+            counts   = allele_counter(df_t, d=q)
+            u_dates, num_seqs = np.unique(list(df_t['times']), return_counts=True)
+            temp_dates = np.arange(np.amin(u_dates), np.amax(u_dates) + 1)
+            n_seqs = []
+            for i in range(len(temp_dates)):
+                if temp_dates[i] in u_dates:
+                    n_seqs.append(num_seqs[list(u_dates).index(temp_dates[i])])
+                else:
+                    n_seqs.append(0)
+            if 'england' in filepath:
+                counts = freqs_from_counts(counts, n_seqs, window=delta_t, min_seqs=min_seqs)
+            else:
+                counts = freqs_from_counts(counts, n_seqs, window=delta_t, min_seqs=min_seqs, hard_window=True)
+            dates = temp_dates[-len(counts):]
+            
+            if counts_tot is None:
+                counts_tot = counts
+                dates_tot  = list(dates)
+            else:
+                counts_tot += counts
+                dates_tot  += dates
         
         # save data
         file = os.path.join(out_str, str(date), location + '.npz')
@@ -788,13 +680,13 @@ def main(args):
         np.savez_compressed(
             g, 
             location=location, 
-            times=dates,
+            times=dates_tot,
             times_full=dates_full,
             ref_sites=ref_sites, 
             allele_number=ref_sites,  
             k=k_ss, N=pop_size, R=R,
-            covar=covar_int, 
-            counts=counts, 
+            covar=covar_tot, 
+            counts=counts_tot, 
             inflow=inflow_term
         )
         g.close()
@@ -806,13 +698,13 @@ def main(args):
             np.savez_compressed(
                 g, 
                 location=location, 
-                times=dates,
+                times=dates_tot,
                 times_full=dates_full,
                 ref_sites=ref_sites, 
                 allele_number=ref_sites,  
                 k=k_ss, N=pop_size, R=R,
-                covar=covar_int, 
-                counts=counts, 
+                covar=covar_tot, 
+                counts=counts_tot, 
                 inflow=inflow_term
             )
             g.close()
