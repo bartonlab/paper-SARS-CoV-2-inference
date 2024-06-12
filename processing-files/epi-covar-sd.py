@@ -19,8 +19,8 @@ def find_site_index_file(filepath):
     """ Given a sequence file find the correct corresponding file that has the site names"""
     directory, file = os.path.split(filepath)
     return filepath[:-4] + '-sites.csv'
-
-
+    
+    
 def get_data(file, get_seqs=True):
     """ Given a sequence file, get the sequences, dates, and mutant site labels"""
     print('sequence file\t', file)
@@ -89,17 +89,15 @@ def trajectory_calc(nVec, sVec, mutant_sites_samp, d=5):
     single_freq_s = allele_counter(nVec, sVec, mutant_sites_samp, d=q)
     single_freq_s = np.swapaxes(np.swapaxes(single_freq_s, 0, 1) / Q, 0, 1)                
     return single_freq_s
-
-
-def find_start_time(df, delta_t=10, min_count=15, min_t=0):
+    
+    
+def find_start_time(df, delta_t=10, min_count=15):
     """Find the start time such that the next delta_t days after that time contain at least min_count sequences"""
     times     = list(df['times'])
     unique_t, counts = np.unique(times, return_counts=True)
     all_times  = []
     all_counts = []
     for t in np.arange(unique_t[0], unique_t[-1] + 1):
-        if t <= min_t:
-            continue
         all_times.append(t)
         if t in unique_t:
             all_counts.append(counts[list(unique_t).index(t)])
@@ -113,17 +111,15 @@ def find_start_time(df, delta_t=10, min_count=15, min_t=0):
         return None
     else:
         return all_times[idx[0]]
-
-
-def find_end_time(df, delta_t=10, min_count=15, min_t=0):
+    
+    
+def find_end_time(df, delta_t=10, min_count=15):
     """Find the start time such that the next delta_t days after that time contain at least min_count sequences"""
     times     = list(df['times'])
     unique_t, counts = np.unique(times, return_counts=True)
     all_times  = []
     all_counts = []
     for t in np.arange(unique_t[0], unique_t[-1] + 1):
-        if t <= min_t:
-            continue
         all_times.append(t)
         if t in unique_t:
             all_counts.append(counts[list(unique_t).index(t)])
@@ -152,13 +148,13 @@ def write_seq_file(seq_file, df):
     f.close()
 
 
-def run_mpl(N, q, seq_file, covar_dir, location, counts=False, num=0):
+def run_mpl(N, q, seq_file, covar_dir, location, counts=False):
     """ Run C++ code that calculates the covariance"""
     
-    covar_file  = f'covar-{location}-{num}.dat'
-    num_file    = f'num-{location}-{num}.dat'
-    out_file    = f'out-{location}-{num}.dat'
-    double_file = f'double-{location}-{num}.dat'
+    covar_file  = f'covar-{location}.dat'
+    num_file    = f'num-{location}.dat'
+    out_file    = f'out-{location}.dat'
+    double_file = f'double-{location}.dat'
     if os.path.exists(os.path.join(covar_dir, covar_file)):
         os.remove(os.path.join(covar_dir, covar_file))
         
@@ -310,27 +306,6 @@ def freqs_from_counts(freq, num_seqs, window=5, min_seqs=200, hard_window=False)
     return final
 
 
-def sample_sequences(df, sample):
-    """ Sample a certain number of sequences per time point from the total population"""
-    new_seqs  = []
-    new_times = []
-    rng       = np.random.default_rng()
-    
-    unique_times = np.unique(df['times'])
-    for t in unique_times:
-        df_temp = df[df['times']==t]
-        seqs    = list(df_temp['sequences'])
-        #times   = list(df_temp['times'])
-        idxs    = rng.choice(np.arange(len(seqs)), size=sample)
-        seqs    = np.array(seqs)[idxs]
-        #times   = np.array(times)[idxs]
-        for i in range(len(seqs)):
-            new_times.append(t)
-            new_seqs.append(seqs[i])
-    df = pd.DataFrame.from_dict({'sequences' : new_seqs, 'times' : new_times})
-    return df
-
-
 def main(args):
     """Calculate the covariance matrix and the trajectories for a single region from SARS-CoV-2 data"""
     
@@ -360,8 +335,6 @@ def main(args):
     parser.add_argument('--decay_rate',  type=float,  default=0,                       help='the exponential decay rate used to correct for infection lasting multiple generations')
     parser.add_argument('--nm_popsize',  type=str,    default=None,                    help='.csv file containing the population sizes used to correct for infection lasting multiple generations')
     parser.add_argument('--delay',       type=int,    default=None,                    help='the delay between the newly infected individuals and the individuals that')
-    parser.add_argument('--startTime',   type=int,    default=None,                    help='the first submission date to consider, in number of days after 2020-01-01')
-    parser.add_argument('--endTime',     type=int,    default=None,                    help='the last submission date to consider, in number of days after 2020-01-01')
     
     arg_list = parser.parse_args(args)
     
@@ -538,20 +511,10 @@ def main(args):
     ### Run inference trimming the data by submission date
     if timed > 0:
         bootstrap_start_time = timer()
-
+        
     full_subdates = np.arange(np.amin(sub_dates), np.amax(sub_dates) + 1)
-    print2(f'submission date range is {full_subdates[0]} to {full_subdates[-1]}')
     for date in full_subdates:
         print2(f'submission date {date} processing')
-        
-        # Skip time point if the date is not between the input start and end dates
-        if arg_list.startTime is not None:
-            if date < arg_list.startTime:
-                continue
-        
-        if arg_list.endTime is not None:
-            if date >= arg_list.endTime:
-                continue
         
         # Skip time point if it is not at least 10 days after the first sequence was collected
         if date < dates_full[0] + 10:
@@ -568,30 +531,11 @@ def main(args):
             continue
         elif end_time - start_time <= delta_t:
             continue
-            
-        temp_end_time = end_time.copy()
-        end_times     = [end_time]
-        start_times   = [start_time]
-        while temp_end_time <= date:
-            new_start_time = find_start_time(df_temp, delta_t=delta_t, min_t=temp_end_time)
-            new_end_time   = find_end_time(df_temp, delta_t=delta_t, min_t=temp_end_time)
-            if new_start_time is None:
-                break
-                #temp_end_time == date
-            elif new_end_time - new_start_time <= delta_t:
-                pass
-            else:
-                start_times.append(new_start_time)
-                end_times.append(new_end_time)
-                temp_end_time = new_end_time
-        if len(start_times)>1:
-            print2(f'more than 1 time-series with good data')
-            print2(f'start times are {start_times}')
-            print2(f'end times are {end_times}')
         else:
-            print2(f'only 1 time series with good sampling')
-            print2(f'start times are {start_times[0]}')
-            print2(f'end times are {end_times[0]}')
+            df_temp = df_temp[df_temp['times']>=start_time]
+            df_temp = df_temp[df_temp['times']<=end_time]
+            print2(f'start time is {start_time}')
+            print2(f'end time is {end_time}')
         
         # skip calculation if there are less than 100 sequences in the dataframe
         if len(df_temp) < 100:
@@ -618,61 +562,42 @@ def main(args):
             
         df_temp = df_temp.sort_values(by=['times'], ignore_index=True)
         
-        # subsample 100 sequences per time
-        df_temp = sample_sequences(df_temp, 100)
-        
         # Write nVec and sVec to file
-        covar_tot  = None
-        counts_tot = None
-        dates_tot  = None
-        for num in range(len(start_times)):
-            
-            df_t = df_temp[df_temp['times']>=start_times[num]]
-            df_t = df_temp[df_temp['times']<=end_times[num]]
-            #print2(f'start time is {start_times[num]}')
-            #print2(f'end time is {end_times[num]}')
-            
-            seq_file = f'seqs-{location}-{date}-{num}.dat'
-            seq_path = os.path.join(covar_dir, seq_file)
-            write_seq_file(seq_path, df_temp)
+        seq_file = f'seqs-{location}-{date}.dat'
+        seq_path = os.path.join(covar_dir, seq_file)
+        write_seq_file(seq_path, df_temp)
     
-            stdout, stderr, exit_code = run_mpl(pop_size, q, seq_file, covar_dir, location, counts=False, num=num)
-            if exit_code != 0:
-                print2(exit_code)
-                print2(stdout)
-                print2(stderr)
+        stdout, stderr, exit_code = run_mpl(pop_size, q, seq_file, covar_dir, location, counts=False)
+        if exit_code != 0:
+            print2(exit_code)
+            print2(stdout)
+            print2(stderr)
         
-            # read in covariance file    
-            covar_file = f'covar-{location}-{num}.dat'
-            covar_path = os.path.join(covar_dir, covar_file)
-            covar_int  = read_covariance(covar_path) * coefficient / 5 
-            if covar_tot is None:
-                covar_tot = covar_int
+        # read in covariance file    
+        covar_file = f'covar-{location}.dat'
+        covar_path = os.path.join(covar_dir, covar_file)
+        covar_int  = read_covariance(covar_path) * coefficient / 5  
+    
+        # delete files
+        #for file in [seq_file, f'covar-{location}.dat', f'num-{location}.dat', f'out-{location}.dat']:
+        #    if os.path.exists(os.path.join(covar_dir, file)):
+        #        os.remove(os.path.join(covar_dir, file))
+        #print2(ref_sites)
+        # calculate the frequencies
+        counts   = allele_counter(df_temp, d=q)
+        u_dates, num_seqs = np.unique(list(df_temp['times']), return_counts=True)
+        temp_dates = np.arange(np.amin(u_dates), np.amax(u_dates) + 1)
+        n_seqs = []
+        for i in range(len(temp_dates)):
+            if temp_dates[i] in u_dates:
+                n_seqs.append(num_seqs[list(u_dates).index(temp_dates[i])])
             else:
-                covar_tot += covar_int
-
-            # calculate the frequencies
-            counts   = allele_counter(df_t, d=q)
-            u_dates, num_seqs = np.unique(list(df_t['times']), return_counts=True)
-            temp_dates = np.arange(np.amin(u_dates), np.amax(u_dates) + 1)
-            n_seqs = []
-            for i in range(len(temp_dates)):
-                if temp_dates[i] in u_dates:
-                    n_seqs.append(num_seqs[list(u_dates).index(temp_dates[i])])
-                else:
-                    n_seqs.append(0)
-            if 'england' in filepath:
-                counts = freqs_from_counts(counts, n_seqs, window=delta_t, min_seqs=min_seqs)
-            else:
-                counts = freqs_from_counts(counts, n_seqs, window=delta_t, min_seqs=min_seqs, hard_window=True)
-            dates = temp_dates[-len(counts):]
-            
-            if counts_tot is None:
-                counts_tot = counts
-                dates_tot  = list(dates)
-            else:
-                counts_tot += counts
-                dates_tot  += dates
+                n_seqs.append(0)
+        if 'england' in filepath:
+            counts = freqs_from_counts(counts, n_seqs, window=delta_t, min_seqs=min_seqs)
+        else:
+            counts = freqs_from_counts(counts, n_seqs, window=delta_t, min_seqs=min_seqs, hard_window=True)
+        dates = temp_dates[-len(counts):]
         
         # save data
         file = os.path.join(out_str, str(date), location + '.npz')
@@ -680,13 +605,13 @@ def main(args):
         np.savez_compressed(
             g, 
             location=location, 
-            times=dates_tot,
+            times=dates,
             times_full=dates_full,
             ref_sites=ref_sites, 
             allele_number=ref_sites,  
             k=k_ss, N=pop_size, R=R,
-            covar=covar_tot, 
-            counts=counts_tot, 
+            covar=covar_int, 
+            counts=counts, 
             inflow=inflow_term
         )
         g.close()
@@ -698,13 +623,13 @@ def main(args):
             np.savez_compressed(
                 g, 
                 location=location, 
-                times=dates_tot,
+                times=dates,
                 times_full=dates_full,
                 ref_sites=ref_sites, 
                 allele_number=ref_sites,  
                 k=k_ss, N=pop_size, R=R,
-                covar=covar_tot, 
-                counts=counts_tot, 
+                covar=covar_int, 
+                counts=counts, 
                 inflow=inflow_term
             )
             g.close()

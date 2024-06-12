@@ -63,14 +63,6 @@ def get_data(file, get_seqs=True):
     return dic
 
 
-def moving_average(freq, window=9):
-    """ Calculates a moving average for a frequency array. """
-    ret = np.cumsum(freq, axis=0)
-    ret[window:] = ret[window:] - ret[:-window]
-    result = ret[window - 1:] / window
-    return result
-
-
 def allele_counter(df, d=5):
     """ Calculates the counts for each allele at each time. """
     #df = df.astype({'sequences' : str})
@@ -193,63 +185,6 @@ def no2index(nVec_t, no):
             return i
 
 
-def allele_counter_in(sVec_in, nVec_in, mutant_sites, traj, pop_in, N, k, R, T, d=5):
-    """ Counts the single-site frequencies of the inflowing sequences"""
-    if isinstance(N, int) or isinstance(N, float):
-        popsize = N * np.ones(T)
-    else:
-        popsize = N
-    single_freq = np.zeros((T, d * len(sVec_in[0][0])))
-    for t in range(T):
-        for i in range(len(sVec_in[0][0])):
-            for j in range(len(sVec_in[t])):
-                single_freq[t, i * d + sVec_in[t][j][i]] = nVec_in[t][j] / popsize[t]
-    coefficient = (N * k * R) * (1 / R) / (k + R)
-    if not isinstance(coefficient, float):
-        coefficient = coefficient[:-1]
-    term_2            = np.swapaxes(traj, 0, 1) * np.array(pop_in[:len(traj)]) / popsize
-    integrated_inflow = np.sum((np.swapaxes(single_freq, 0, 1) - term_2) * coefficient,  axis=1)
-    return integrated_inflow
-
-
-def add_previously_infected(nVec, sVec, popsize, decay_rate):
-    """ Adds previously infected individuals to the population at later dates."""
-    if type(popsize)==int or type(popsize)==float:
-        popsize = np.ones(len(nVec)) * popsize
-    new_nVec = [[i for i in nVec[0]]]
-    new_sVec = [[i for i in sVec[0]]]
-    for t in range(1, len(nVec)):
-        nVec_t = list(np.array([i for i in nVec[t]]) * popsize[t] / np.sum(nVec[t]))
-        sVec_t = [i for i in sVec[t]]
-        for t_old in range(t):
-            probability = np.exp(- decay_rate * (t - t_old)) * (1 - np.exp(- decay_rate))
-            old_nVec    = list(probability * np.array(nVec[t_old]) * popsize[t_old] / np.sum(nVec[t_old]))
-            old_sVec    = sVec[t_old]
-            nVec_temp   = []
-            sVec_temp   = []
-            for j in range(len(old_nVec)):
-                if int(round(old_nVec[j]))>0:
-                    nVec_temp.append(old_nVec[j])
-                    sVec_temp.append(old_sVec[j])
-                    nVec_t, sVec_t = combine(nVec_t, sVec_t, nVec_temp, sVec_temp)
-        new_nVec.append(nVec_t)
-        new_sVec.append(sVec_t)
-    return new_nVec, new_sVec
-
-
-def combine(nVec1, sVec1, nVec2, sVec2):
-    """ Combines sequence and count arrays at a specific time."""
-    sVec_new = [list(i) for i in sVec1]
-    nVec_new = [i for i in nVec1]
-    for i in range(len(sVec2)):
-        if list(sVec2[i]) in sVec_new:
-            nVec_new[sVec_new.index(list(sVec2[i]))] += nVec2[i]
-        else:
-            nVec_new.append(nVec2[i])
-            sVec_new.append(list(sVec2[i]))
-    return nVec_new, sVec_new
-
-
 def freqs_from_counts(freq, num_seqs, window=5, min_seqs=200, hard_window=False):
     """ Smooths the counts and then finds the total frequencies"""
     # Determine window size, requiring min_seqs sequences in the beginning and end or a maximum of window days
@@ -321,34 +256,6 @@ def sample_sequences(df, sample):
             new_seqs.append(seqs[i])
     df = pd.DataFrame.from_dict({'sequences' : new_seqs, 'times' : new_times})
     return df
-        
-
-
-#def sample_sequences(sVec, nVec, sample):
-#    """ Sample a certain number of sequences from the whole population. """
-#    if sample==0 or sample==None:
-#        return sVec, nVec
-#    sVec_sampled = []
-#    nVec_sampled = []
-#    num_seqs     = np.array([np.sum(i) for i in nVec], dtype=int)
-#    for t in range(len(nVec)):
-#        if int(num_seqs[t])==0:
-#            nVec_sampled.append(nVec[t])
-#            sVec_sampled.append(sVec[t])
-#            continue
-#        if not isinstance(num_seqs[t], int):
-#            print(num_seqs[t])
-#        nVec_tmp = []
-#        sVec_tmp = []
-#        nos_sampled = np.random.choice(num_seqs[t], sample, replace=True)
-#        indices_sampled = [no2index(nVec[t], no) for no in nos_sampled]
-#        indices_sampled_unique = np.unique(indices_sampled)
-#        for i in range(len(indices_sampled_unique)):
-#            nVec_tmp.append(np.sum([index == indices_sampled_unique[i] for index in indices_sampled]))
-#            sVec_tmp.append(sVec[t][indices_sampled_unique[i]])
-#        nVec_sampled.append(np.array(nVec_tmp))
-#        sVec_sampled.append(np.array(sVec_tmp, dtype=object))
-#    return sVec_sampled, nVec_sampled
 
 
 def allele_counter_in(sVec_in, nVec_in, mutant_sites, traj, pop_in, N, k, R, T, d=5):
@@ -404,7 +311,6 @@ def main(args):
     parser.add_argument('-R',            type=float,  default=2,                       help='the basic reproduction number')
     parser.add_argument('-k',            type=float,  default=0.1,                     help='parameter determining shape of distribution of new infected')
     parser.add_argument('-q',            type=int,    default=5,                       help='number of mutant alleles per site')
-    parser.add_argument('--mu',          type=float,  default=0.,                      help='the mutation rate')
     parser.add_argument('--data',        type=str,    default=None,                    help='.npz files containing the counts, sequences, times, and mutant_sites for different locations')
     parser.add_argument('--scratch',     type=str,    default='scratch',               help='scratch directory to write temporary files to')
     parser.add_argument('--record',      type=int,    default=1,                       help='number of generations between samples')
@@ -427,12 +333,10 @@ def main(args):
     parser.add_argument('--delay',       type=int,    default=None,                    help='the delay between the newly infected individuals and the individuals that')
     parser.add_argument('--bsSample',    type=int,    default=0,                       help='the number of samples to take per day in each bootstrap run')
     parser.add_argument('--nruns',       type=int,    default=1,                       help='the number of bootstrap runs to do')
-    parser.add_argument('--trajectories',   action='store_true', default=False,  help='whether or not to save the trajectories')
     
     arg_list = parser.parse_args(args)
     
     out_str       = arg_list.o
-    mu            = arg_list.mu
     q             = arg_list.q
     record        = arg_list.record
     window        = arg_list.window

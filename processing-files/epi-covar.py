@@ -62,14 +62,6 @@ def get_data(file, get_seqs=True):
     return dic
 
 
-def moving_average(freq, window=9):
-    """ Calculates a moving average for a frequency array. """
-    ret = np.cumsum(freq, axis=0)
-    ret[window:] = ret[window:] - ret[:-window]
-    result = ret[window - 1:] / window
-    return result
-
-
 def allele_counter(df, d=5):
     """ Calculates the counts for each allele at each time. """
     #df = df.astype({'sequences' : str})
@@ -87,6 +79,18 @@ def allele_counter(df, d=5):
                 single[t, (i * d) + seqs_t[j][i]] += 1
     return single
 
+"""
+def allele_counter(df, d=5):
+    # DECONVOLUTION CODE
+    L = len(df['sequence'].iloc[0])
+    single = np.zeros((len(np.unique(df['times'])), L * d))
+    for df_iter, df_entry in df.iterrows():
+        seq = np.array(list(df_entry['sequence']))
+        for i in range(len(seq)):
+            single[df_iter, (i * d) + seq[j]] += df_entry['counts']
+    return single
+"""
+
 
 def trajectory_calc(nVec, sVec, mutant_sites_samp, d=5):
     """ Calculates the frequency trajectories"""
@@ -98,6 +102,17 @@ def trajectory_calc(nVec, sVec, mutant_sites_samp, d=5):
     single_freq_s = np.swapaxes(np.swapaxes(single_freq_s, 0, 1) / Q, 0, 1)                
     return single_freq_s
 
+"""
+def write_seq_file(seq_file, df):
+    # DECONVOLUTION CODE
+    f = open(seq_file, 'w')
+    for df_iter, df_row in df.iterrows():
+        seq    = [str(i) for i in df_row['sequence']]
+        time   = df_row['times']
+        counts = df_row['counts']
+        f.write('%d\t%d\t%s\n' % (time, counts, ' '.join(seq)))
+    f.close()
+"""
 
 def write_seq_file(seq_file, df):
     """ Write the sequences into a file that can be read by the C++ code to calculate the covariance."""
@@ -117,7 +132,7 @@ def write_seq_file(seq_file, df):
     f.close()
 
 
-def run_mpl(N, q, seq_file, covar_dir, location, counts=False):
+def run_mpl(N, q, seq_file, covar_dir, location, ID=None, counts=False):
     """ Run C++ code that calculates the covariance"""
     
     covar_file  = f'covar-{location}.dat'
@@ -126,12 +141,16 @@ def run_mpl(N, q, seq_file, covar_dir, location, counts=False):
     double_file = f'double-{location}.dat'
     if os.path.exists(os.path.join(covar_dir, covar_file)):
         os.remove(os.path.join(covar_dir, covar_file))
-        
+    
+    cpp_script = './bin/mpl'
+    if ID:
+        cpp_script = f'./bin/mpl-{ID}'
+        print(ID)
     if counts:
-        proc = subprocess.Popen(['./bin/mpl', '-d', covar_dir, '-i', seq_file, '-o', out_file, '-g', str(0), '-N', f'{N}', '-sc', covar_file, '-sn', num_file, '-q', str(q), '-dc', double_file], 
+        proc = subprocess.Popen([cpp_script, '-d', covar_dir, '-i', seq_file, '-o', out_file, '-g', str(0), '-N', f'{N}', '-sc', covar_file, '-sn', num_file, '-q', str(q), '-dc', double_file], 
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
     else: 
-        proc = subprocess.Popen(['./bin/mpl', '-d', covar_dir, '-i', seq_file, '-o', out_file, '-g', str(0), '-N', f'{N}', '-sc', covar_file, '-sn', num_file, '-q', str(q)], 
+        proc = subprocess.Popen([cpp_script, '-d', covar_dir, '-i', seq_file, '-o', out_file, '-g', str(0), '-N', f'{N}', '-sc', covar_file, '-sn', num_file, '-q', str(q)], 
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
     stdout, stderr = proc.communicate()
     return_code    = proc.returncode
@@ -183,15 +202,6 @@ def read_covariance(covar_path, time_varying=False, counts=False, tv_dir=None, l
     return np.array(covar_int, dtype=float)
 
 
-def no2index(nVec_t, no):
-    """ Find out what group a sampled individual is in (what sequence does it have) """
-    tmp_No2Index = 0
-    for i in range(len(nVec_t)):
-        tmp_No2Index += nVec_t[i]
-        if tmp_No2Index > no:
-            return i
-
-
 def allele_counter_in(sVec_in, nVec_in, mutant_sites, traj, pop_in, N, k, R, T, d=5):
     """ Counts the single-site frequencies of the inflowing sequences"""
     if isinstance(N, int) or isinstance(N, float):
@@ -234,19 +244,6 @@ def add_previously_infected(nVec, sVec, popsize, decay_rate):
         new_nVec.append(nVec_t)
         new_sVec.append(sVec_t)
     return new_nVec, new_sVec
-
-
-def combine(nVec1, sVec1, nVec2, sVec2):
-    """ Combines sequence and count arrays at a specific time."""
-    sVec_new = [list(i) for i in sVec1]
-    nVec_new = [i for i in nVec1]
-    for i in range(len(sVec2)):
-        if list(sVec2[i]) in sVec_new:
-            nVec_new[sVec_new.index(list(sVec2[i]))] += nVec2[i]
-        else:
-            nVec_new.append(nVec2[i])
-            sVec_new.append(list(sVec2[i]))
-    return nVec_new, sVec_new
 
 
 def freqs_from_counts(freq, num_seqs, window=5, min_seqs=200, hard_window=False):
@@ -310,7 +307,6 @@ def main(args):
     parser.add_argument('-R',            type=float,  default=2,                       help='the basic reproduction number')
     parser.add_argument('-k',            type=float,  default=0.1,                     help='parameter determining shape of distribution of new infected')
     parser.add_argument('-q',            type=int,    default=5,                       help='number of mutant alleles per site')
-    parser.add_argument('--mu',          type=float,  default=0.,                      help='the mutation rate')
     parser.add_argument('--data',        type=str,    default=None,                    help='.npz files containing the counts, sequences, times, and mutant_sites for different locations')
     parser.add_argument('--scratch',     type=str,    default='scratch',               help='scratch directory to write temporary files to')
     parser.add_argument('--record',      type=int,    default=1,                       help='number of generations between samples')
@@ -331,14 +327,13 @@ def main(args):
     parser.add_argument('--decay_rate',  type=float,  default=0,                       help='the exponential decay rate used to correct for infection lasting multiple generations')
     parser.add_argument('--nm_popsize',  type=str,    default=None,                    help='.csv file containing the population sizes used to correct for infection lasting multiple generations')
     parser.add_argument('--delay',       type=int,    default=None,                    help='the delay between the newly infected individuals and the individuals that')
-    parser.add_argument('--trajectories',   action='store_true', default=False,  help='whether or not to save the trajectories')
+    parser.add_argument('--ID',          type=str,    default=None,                    help='the slurm array task ID in case there are multiple C++ files, one for each parallel job')
     parser.add_argument('--tv_inference',   action='store_true', default=False,  help='whether or not inference is done at every time')
     parser.add_argument('--find_counts',    action='store_true', default=False,  help='whether or not to calculate the single and double site frequencies')
     
     arg_list = parser.parse_args(args)
     
     out_str       = arg_list.o
-    mu            = arg_list.mu
     q             = arg_list.q
     record        = arg_list.record
     window        = arg_list.window
@@ -372,6 +367,10 @@ def main(args):
         delta_t = arg_list.delta_t
     if arg_list.remove_sites:
         remove_sites = np.load(arg_list.remove_sites)
+    if arg_list.ID:
+        task_ID = arg_list.ID
+    else:
+        task_ID = None
     
     # creating directories for c++ files
     if not os.path.exists(out_str):
@@ -521,9 +520,9 @@ def main(args):
     else:
         stdout, stderr, exit_code = run_mpl(pop_size, q, seq_file, covar_dir, location, counts=False)
     if exit_code != 0:
-        print2(exit_code)
-        print2(stdout)
-        print2(stderr)
+        print2('exit code:', exit_code)
+        print2('stdout', stdout)
+        print2('stderr', stderr)
     
     covar_file = f'covar-{location}.dat'
     if arg_list.tv_inference:

@@ -16,7 +16,7 @@ NUC = ['-', 'A', 'C', 'G', 'T']
 PRO = ['-', 'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H',
        'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V']
 REF = NUC[0]
-REF_TAG     = 'EPI_ISL_402125'
+REF_TAG     = 'EPI_ISL_402124'
 ALPHABET    = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 NUMBERS     = '0123456789'
 TIME_INDEX  = 1
@@ -63,27 +63,6 @@ def eliminate_ref_gaps(ref_seq):
     return idxs_keep, ref_poly
 
 
-def index_ref_seq(ref_seq, out_file):
-    """Finds an index for the sites on the unfiltered reference sequence so that they can be found after regions are combined"""
-    ref_seq   = list(ref_seq)
-    ref_index = 0
-    ref_alpha = 0
-    f = open(out_file + '.csv')
-    f.write('index,ref_index\n')
-    for i in range(len(reg_seq)):
-        ref_str = 'NA'
-        if ref_seq[i]!='-':
-            ref_str = '%d' % ref_index
-            ref_index += 1
-            ref_alpha  = 0
-        else:
-            ref_str = '%d%s' % (ref_index-1, ALPHABET[ref_alpha])
-            ref_alpha += 1
-        ref_sites.append(ref_str)
-        f.write(f'{i},{ref_str}\n')
-    f.close()
-
-
 def fromisoformat(isodate):
     """ Transforms a date in the YYYY-MM-DD format into a datetime object."""
     year  = int(isodate[:4])
@@ -114,15 +93,21 @@ def main():
     
     if not os.path.exists(out_folder):
         os.mkdir(out_folder)
-    #genome_dir = os.path.join(out_folder, "genome-data")
-    #if not os.path.exists(genome_dir):
-    #    os.mkdir(genome_dir)
-    out_dir = out_folder
+    #out_dir = out_folder
     
     # Choose sequence subsets for analysis
     ref_date   = fromisoformat('2020-01-01')  # reference starting date ('day 0')
-    identifier = out_folder
+    #identifier = out_folder
     selected   = np.load(arg_list.regions, allow_pickle=True)
+    
+    # in order to unpack regions where one of the location level entries is a list of subregions
+    selected    = list(selected)
+    selected[0] = list(selected[0])
+    for i in range(len(selected[0])):
+        if selected[0][i] is None:
+            continue
+        if '_' in selected[0][i]:
+            selected[0][i] = selected[0][i].split('_')   
     
     reg_name    = '-'.join(selected[0][:2])
     status_name = f'genome-status-{reg_name}.csv'
@@ -138,7 +123,6 @@ def main():
         stat_file.close()
         print(string)
         
-    #df = dd.read_csv(input_file)
     df = pd.read_csv(input_file)
     print2('loading MSA finished')
     print2('number of genomes in original MSA', len(list(df['accession'])))
@@ -204,36 +188,38 @@ def main():
     
     # Find databases and open enviornments
     db_paths   = []
-    db_handles = []    # the actual enviornment where the database is stored
+    #db_handles = []    # the actual enviornment where the database is stored
     for file in os.listdir(lmdb_dir):
         path = os.path.join(lmdb_dir, file)
         if os.path.isdir(path):
             db_paths.append(path)
-            env = lmdb.open(path, map_size=int(1E12), max_dbs=100, max_readers=2000)
-            db_handles.append(env)
+            #env = lmdb.open(path, map_size=int(8E9), max_dbs=100, max_readers=2000)
+            #env = lmdb.open(path, max_dbs=100, readonly=True, max_readers=2000, map_size=int(1E7))
+            #db_handles.append(env)
             
     extraction_start_time = timer()
     
     sub_label = os.path.split(arg_list.regions)[1]
-    out_file  = os.path.join(out_dir, str(sub_label)[:-4] + '.csv')
+    out_file  = os.path.join(out_folder, str(sub_label)[:-4] + '.csv')
     f         = open(out_file, mode='w')
     f.write('accession,date,submission_date,sequence\n')
     
     # get reference sequence
-    #temp_msa  = []
-    #temp_acc  = []
-    #temp_date = []
     tags_set    = set()
     ref_present = False
     ref_poly    = ''
     idxs_keep   = []
-    for db in db_handles:
+    for db_path in db_paths:
+        db = lmdb.open(db_path, max_dbs=100, readonly=True, max_readers=2000, map_size=int(1E7))
         with db.begin() as txn:
             ref = txn.get(REF_TAG.encode())
             if ref:
+                print(f'full reference sequence\n{ref}')
                 #temp_msa.append(ref.decode('utf-8'))
                 ref = ref.decode('utf-8')
                 idxs_keep, ref = eliminate_ref_gaps(ref)
+                print(f'reference sequence after gaps eliminated\n{ref}')
+                #ref_seq = ''.join(list(ref))    # TRY TO ADD THIS (AND ELIMINATE THE LINE ON 231) IF THERE APPEARS TO BE AN ISSUE AND REPLACE "ref" below with "ref_seq"
                 f.write(f'{REF_TAG},2020-01-01,2020-01-01,{ref}\n')
                 #temp_tag.append(REF_TAG)
                 tags_set.add(REF_TAG)
@@ -252,7 +238,7 @@ def main():
         tag = '.'.join([temp_accession, str(entry['date'])])
         if tag not in tags_set:
             tags_set.add(tag)
-            acc_to_date[temp_accession] = str(entry['date'])
+            acc_to_date[temp_accession]    = str(entry['date'])
             acc_to_subdate[temp_accession] = str(entry['submission_date'])
         else:
             print('\tUnexpected duplicate sequence %s' % tag)
@@ -260,7 +246,8 @@ def main():
     # extract sequences from database and compile associated metadata
     keys     = [i.encode() for i in acc_to_date]
     accs_set = set()
-    for db in db_handles:
+    for db_path in db_paths:
+        db = lmdb.open(db_path, max_dbs=100, readonly=True, max_readers=2000, map_size=int(1E7))
         with db.begin() as txn:
             with txn.cursor() as crs:
                 db_results = crs.getmulti(keys)
@@ -275,19 +262,15 @@ def main():
                             continue
                         new_seq = ''.join(list(new_seq))
                         f.write(f'{db_accs[i]},{acc_to_date[db_accs[i]]},{acc_to_subdate[db_accs[i]]},{new_seq}\n')
-                        #temp_acc.append(db_accs[i])
-                        #temp_date.append(acc_to_date[db_accs[i]])
-                        #temp_msa.append(db_seqs[i])
-    #temp_tag = [REF_TAG] + ['.'.join([temp_acc[i], temp_date[i]]) for i in range(len(temp_acc))]
     f.close()
     
     extraction_end_time = timer()
     print2(f'took {(extraction_end_time - extraction_start_time) / 60} minutes to get sequences from database')
-    
-    
-    
 
     
+
+
+
 
 
 if __name__ == '__main__':

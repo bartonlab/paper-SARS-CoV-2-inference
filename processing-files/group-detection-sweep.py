@@ -84,7 +84,7 @@ def main(args):
 
     if save_groups:
         grps_out = open(out_file[:-4] + '-groups.csv', 'w')
-        grps_out.write(f'positive,{aux.COL_THRESH},{aux.COL_GROUP},{aux.COL_S},{aux.COL_MATCH},time\n')
+        grps_out.write(f'positive,{aux.COL_THRESH},{aux.COL_GROUP},{aux.COL_S},{aux.COL_MATCH},{aux.COL_ASSOC},{aux.COL_MEMBER},time\n')
     
     # ITERATE
     for thresh in thresh_vals:
@@ -123,10 +123,12 @@ def main(args):
                             #    print(row[aux.COL_MEMBER])
 
                             if arg_list.closestVar:
-                                closest_var = row[aux.COL_MATCH].lower()
+                                closest_var = row[aux.COL_MATCH]
                                 vars_temp   = [closest_var]
 
-                            grps_out.write(f"False,{thresh:.4f},{' '.join(list(temp_group))},{temp_s:.6f},{closest_var},{t}\n")
+                            col_assoc = row[aux.COL_ASSOC]
+                            col_mem   = row[aux.COL_MEMBER]
+                            grps_out.write(f"True,{thresh:.4f},{' '.join(list(temp_group))},{temp_s:.6f},{closest_var},{col_assoc},{col_mem},{t}\n")
 
                         
                     # True positive
@@ -139,11 +141,13 @@ def main(args):
                             vars_temp = [v.lower() for v in row[aux.COL_MEMBER].split()]
 
                             if arg_list.closestVar:
-                                closest_var = row[aux.COL_MATCH].lower()
+                                closest_var = row[aux.COL_MATCH]
                                 vars_temp   = [closest_var]
 
                             if save_groups:
-                                grps_out.write(f"True,{thresh:.4f},{' '.join(list(temp_group))},{temp_s:.6f},{closest_var},{t}\n")
+                                col_assoc = row[aux.COL_ASSOC]
+                                col_mem   = row[aux.COL_MEMBER]
+                                grps_out.write(f"True,{thresh:.4f},{' '.join(list(temp_group))},{temp_s:.6f},{closest_var},{col_assoc},{col_mem},{t}\n")
 
                             for v in vars_temp:
                                 if v in variants:
@@ -152,7 +156,7 @@ def main(args):
                                         first_detected[idx] = t
 
                         elif save_groups:
-                            grps_out.write(f"True,{thresh:.4f},{' '.join(list(temp_group))},{temp_s:.6f},None,{t}\n")
+                            grps_out.write(f"True,{thresh:.4f},{' '.join(list(temp_group))},{temp_s:.6f},None,None,None,{t}\n")
                     
                     # Add to detected mutations
                     if arg_list.elimSites:
@@ -162,10 +166,12 @@ def main(args):
                 # Negatives
                 elif arg_list.allGroups:
                     if arg_list.closestVar:
-                        closest_var = row[aux.COL_MATCH].lower()
+                        closest_var = row[aux.COL_MATCH]
 
                     if save_groups:
-                        grps_out.write(f"NA,{thresh:.4f},{' '.join(list(temp_group))},{temp_s:.6f},{closest_var},{t}\n")
+                        col_assoc = row[aux.COL_ASSOC]
+                        col_mem   = row[aux.COL_MEMBER]
+                        grps_out.write(f"False,{thresh:.4f},{' '.join(list(temp_group))},{temp_s:.6f},{closest_var},{col_assoc},{col_mem},{t}\n")
 
                     
         # Record results for this threshold value

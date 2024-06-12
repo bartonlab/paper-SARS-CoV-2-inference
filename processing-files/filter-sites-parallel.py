@@ -18,7 +18,7 @@ REF_TAG = 'EPI_ISL_402125'
 NUC     = ['-', 'A', 'C', 'G', 'T']
 START_IDX = 150
 END_IDX   = 29690
-MAX_GAP_FREQ = 0.95
+MAX_GAP_FREQ = 0.50
 
 
 def find_site_index_file(filepath):
@@ -46,25 +46,19 @@ def get_data(file, get_seqs=True):
     dic = {
         'ref_sites' : ref_sites,
         'mutant_sites' : mut_sites,
-        'sequences' : sequences[:-1],
-        'dates' : dates[:-1],
-        'submission_dates' : sub_dates[:-1]
+        'sequences' : sequences,
+        'dates' : dates,
+        'submission_dates' : sub_dates
     }
     return dic
-
-
-def moving_average(freq, window=9):
-    """ Calculates a moving average for a frequency array. """
-    ret = np.cumsum(freq, axis=0)
-    ret[window:] = ret[window:] - ret[:-window]
-    result = ret[window - 1:] / window
-    return result
 
 
 def impute_gaps(msa, counts, gaps, ref_idxs):
     """ Impute ambiguous nucleotides with the most frequently observed ones in the alignment. """
     
     # Find site numbers that don't have known deletions
+    print(f'there are {len(msa)} sequences in the MSA')
+    print(f'there are {len(msa[0])} sites in the MSA before dealing with gaps')
     mask     = ~np.isin(ref_idxs, gaps)
     col_idxs = np.arange(len(ref_idxs))[mask]
     
@@ -72,7 +66,8 @@ def impute_gaps(msa, counts, gaps, ref_idxs):
     #print('%d ambiguous nucleotides across %d sequences' % (np.sum(ambiguous), len(msa)))
     idxs_drop = []
     for i in col_idxs:
-        if counts[i][0] / len(msa) < MAX_GAP_FREQ:
+        print(counts[i])
+        if counts[i][0] / len(msa) > MAX_GAP_FREQ:
             idxs_drop.append(i)
     
     for i in range(len(msa)):
@@ -84,8 +79,11 @@ def impute_gaps(msa, counts, gaps, ref_idxs):
             msa[i][j] = new
             
     idxs_keep = np.array([i for i in np.arange(len(ref_idxs)) if i not in idxs_drop])
-    print(idxs_drop)
-    print(idxs_keep)
+    print(f'indices to drop are {idxs_drop}')
+    print(f'indices to keep are {idxs_keep}')
+    #if len(idxs_keep)==0:
+    #    print('All remaining sites have more than the maximum number of sequences with gaps and are not deletions belonging to major variants')
+    #    sys.exit()
     ref_idxs  = np.array(ref_idxs)[idxs_keep]
     new_msa   = []
     for seq in msa:
@@ -101,7 +99,7 @@ def main(args):
     parser.add_argument('-o',             type=str,    default=None,           help='output directory')
     parser.add_argument('--max_dir',      type=str,    default=None,           help='directory containing maximum frequencies for each site')
     parser.add_argument('--input',        type=str,    default=None,           help='input file containing sequence data')
-    parser.add_argument('--min_count',    type=int,    default=5,              help='the maximum frequency at which to cutoff sites')
+    parser.add_argument('--min_count',    type=int,    default=0,              help='the maximum frequency at which to cutoff sites')
     parser.add_argument('--min_freq',     type=float,  default=0.01,           help='the minimum regional frequency required in order to keep a site')
     parser.add_argument('--freqWindow',   type=int,    default=5,              help='the number of consecutive days in which the frequency must be higher than min_freq')
     parser.add_argument('--smoothWindow', type=int,    default=2,              help='the number of days over which to smooth the frequencies')
@@ -119,7 +117,6 @@ def main(args):
     smooth_window = arg_list.smoothWindow
     
     ref_df = pd.read_csv(arg_list.refFile)
-    #index  = [int(i) for i in list(ref_df['ref_index'])]
     index  = list(ref_df['ref_index'])
     nucs   = np.array(ref_df['nucleotide'])
     
@@ -135,8 +132,6 @@ def main(args):
     freq_data  = np.load(os.path.join(max_dir, file_tail), allow_pickle=True)
     mut_counts = freq_data['mut_counts']
     freqs      = freq_data['frequency']
-    #freqs      = moving_average(freqs, window=smooth_window)
-    #max_freqs  = np.array([np.sum(i) for i in max_freqs])
     seq_data   = get_data(file)
     refs       = np.array(seq_data['ref_sites'])
     muts       = np.array(seq_data['mutant_sites'])
@@ -150,13 +145,10 @@ def main(args):
     freq_mask  = np.any(freqs > min_freq, axis=2)
     freq_mask  = np.any([np.all(freq_mask[i:i+window], axis=0) for i in range(len(freq_mask)-window)], axis=0)
     mask       = np.logical_and(np.array(new_counts)>min_count, freq_mask)
-    #num_poly   = np.count_nonzero(mut_counts>=min_count, axis=1)
-    #mask       = np.logical_and(np.logical_and(np.array(new_counts)>min_count, freq_mask), num_poly==len(NUC)-1)
-
-    #seqs_new = seq_data['sequences'][:, mask]
-    seqs_new = np.array([i[mask] for i in seq_data['sequences']])
-    muts_new = muts[mask]
-    refs_new = refs[mask]
+    seqs_new   = np.array([i[mask] for i in seq_data['sequences']])
+    muts_new   = muts[mask]
+    refs_new   = refs[mask]
+    print('sites that are still remaining after the frequency cutoff are', refs_new)
     
     # Impute ambiguous gaps for sites that do not have known deletions
     seqs_new, refs_new = impute_gaps(seqs_new, mut_counts[mask], gap_list, refs_new)
