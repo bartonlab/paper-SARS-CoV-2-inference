@@ -4,14 +4,15 @@
 This repository contains and data and scripts for reproducing the results accompanying the manuscript  
 
 ### Inferring effects of mutations on SARS-CoV-2 transmission from genomic surveillance data
-Brian Lee<sup>1</sup>, Muhammad Saqib Sohail<sup>2</sup>, Elizabeth Finney<sup>1</sup>, Syed Faraz Ahmed<sup>2</sup>, Ahmed Abdul Quadeer<sup>2</sup>, Matthew R. McKay<sup>2,3,4,5</sup> and John P. Barton<sup>1,#</sup>
+Brian Lee<sup>1</sup>, Ahmed Abdul Quadeer<sup>2</sup>, Muhammad Saqib Sohail<sup>2,4</sup>, Elizabeth Finney<sup>1</sup>, Syed Faraz Ahmed<sup>2,3,5</sup>, Matthew R. McKay<sup>2,3,4,5,6,#</sup> and John P. Barton<sup>1,#</sup>
 
 <sup>1</sup> Department of Physics and Astronomy, University of California, Riverside  
 <sup>2</sup> Department of Electronic and Computer Engineering, Hong Kong University of Science and Technology  
-<sup>3</sup> Department of Chemical and Biological Engineering, Hong Kong University of Science and Technology  
-<sup>4</sup> Department of Electrical and Electronic Engineering, University of Melbourne  
+<sup>3</sup> Department of Electrical and Electronic Engineering, University of Melbourne  
+<sup>4</sup> Department of Computer Sciences, Bahria University  
 <sup>5</sup> Department of Microbiology and Immunology, University of Melbourne, at The Peter Doherty Institute for Infection and Immunity  
-<sup>#</sup> correspondence to [john.barton@ucr.edu](mailto:john.barton@ucr.edu)  
+<sup>6</sup> Victorian Infectious Diseases Reference Laboratory, Royal Melbourne Hospital  
+<sup>#</sup> correspondence to [matthew.mckay@unimelb.edu.au](mailto:matthew.mckay@unimelb.edu.au) and [jpbarton@pitt.edu](mailto:jpbarton@pitt.edu)  
 
 The preprint is available at [https://www.medrxiv.org/content/10.1101/2021.12.31.21268591](https://www.medrxiv.org/content/10.1101/2021.12.31.21268591).
 
