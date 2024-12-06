@@ -71,7 +71,7 @@ TICK_LENGTH         = 4
 LEGEND_FONTSIZE     = 6
 
 # Directories
-PROCESS_DIR  = '/Users/brianlee/SARS-CoV-2-Data/Processing-files'
+PROCESS_DIR  = 'processing-files'
 fig_path   = 'figures'
 FIG_DIR    = fig_path
 image_path = 'images'
@@ -2573,7 +2573,7 @@ def dist_syn_plots(file, link_file, link_file_all, syn_file, index_file=None, fu
         ax1.spines[line].set_visible(False)
     for line in ['left', 'bottom']:
         ax1.spines[line].set_linewidth(SPINE_LW)
-    sns.lineplot(np.arange(len(nonsyn_nonlinked))+1, 100*nonsyn_nonlinked, ax=ax1, lw=1, color=MAIN_COLOR)
+    sns.lineplot(x=np.arange(len(nonsyn_nonlinked))+1, y=100*nonsyn_nonlinked, ax=ax1, lw=1, color=MAIN_COLOR)
     ax1.axhline(100*nonsyn_nonlinked[-1], lw=1, color=COMP_COLOR, alpha=0.75)
     ax1.text(0.25, (100*nonsyn_nonlinked[-1]-syn_lower_limit)/(100-syn_lower_limit) - 0.05, 'Background', fontsize=6, transform=ax1.transAxes, ha='center', va='center')
     ax1.set_xscale('log')
@@ -3576,7 +3576,7 @@ def b117_plot(inf_file, tv_file, link_file, full_tv_file=None, start=355, end_ti
     #print(ax1.get_yticks())
     ax1.set_yticks(ax1.get_yticks()[:-2])
     #print(ax1.get_yticks())
-    sns.lineplot(np.arange(start_time, start_time + len(site_inf)), site_inf, ax=ax1, color=color1)
+    sns.lineplot(x=np.arange(start_time, start_time + len(site_inf)), y=site_inf, ax=ax1, color=color1)
     # convert xticks to dates
     xticklabels = [(dt.timedelta(days=int(i)) + dt.datetime(2020,1,1)) for i in ax1.get_xticks()]
     if matt_fig:
@@ -3610,7 +3610,7 @@ def b117_plot(inf_file, tv_file, link_file, full_tv_file=None, start=355, end_ti
     ax3.tick_params(axis='y', labelcolor='k', labelsize=TICK_FONTSIZE, width=SPINE_LW)
     ax3.set_ylabel('Frequency (%)', color='k', fontsize=AXES_FONTSIZE)
     ax3.set_yticklabels(['%.1f' % (100*float(i)) for i in ax3.get_yticks()])
-    sns.lineplot(np.arange(start_time, start_time + len(site_inf)), uk_traj[-len(site_inf):], color=color3, ax=ax3)
+    sns.lineplot(x=np.arange(start_time, start_time + len(site_inf)), y=uk_traj[-len(site_inf):], color=color3, ax=ax3)
     #ax3.axvline(x=t_detected, ymin=ymin3, ymax=(traj_detected / ymax3), color='k', linestyle='dashed')
     ax3.axhline(y=traj_detected, xmin=((t_detected-start_time)/(times_all[-1]-start_time)), xmax=1, color='k', linestyle='dashed')
     ax3.text(1.085, traj_detected, '%.3f' % traj_detected, fontsize=8, transform=ax3.transAxes, ha='center', va='center')
@@ -3630,7 +3630,7 @@ def b117_plot(inf_file, tv_file, link_file, full_tv_file=None, start=355, end_ti
     ax4.set_xlim(full_times[0], full_times[-1])
     ax4.tick_params(axis='y', labelcolor='k', labelsize=TICK_FONTSIZE, width=SPINE_LW)
     ax4.tick_params(axis='x', labelsize=TICK_FONTSIZE, width=SPINE_LW)
-    sns.lineplot(full_times, full_inf, ax=ax4, color=color1)
+    sns.lineplot(x=full_times, y=full_inf, ax=ax4, color=color1)
     for line in ['top', 'right']:
         ax4.spines[line].set_visible(False)
     # converting the times to dates
@@ -3652,9 +3652,9 @@ def b117_plot(inf_file, tv_file, link_file, full_tv_file=None, start=355, end_ti
     ax5.set_yticks([0, 0.5, 1])
     ax5.set_yticklabels(['0', '50', '100'])
     if nosmooth:
-        sns.lineplot(full_times[-len(uk_traj_full):], uk_traj_full, color=color3, ax=ax5)
+        sns.lineplot(x=full_times[-len(uk_traj_full):], y=uk_traj_full, color=color3, ax=ax5)
     else:
-        sns.lineplot(full_times[-len(uk_traj_full):] - int(window_size/2), uk_traj_full, color=color3, ax=ax5)
+        sns.lineplot(x=full_times[-len(uk_traj_full):] - int(window_size/2), y=uk_traj_full, color=color3, ax=ax5)
     for line in ['top', 'right']:
         ax5.spines[line].set_visible(False)
     ax5.text(-0.25, 1, 'a', fontweight='bold', transform=ax5.transAxes, fontsize=8)
@@ -3861,7 +3861,7 @@ def b117_plot_alt(tv_file, variant_file, link_file, full_tv_file=None, start=355
     #print(ax1.get_yticks())
     ax1.set_yticks(ax1.get_yticks()[:-2])
     #print(ax1.get_yticks())
-    sns.lineplot(np.arange(start_time, start_time + len(site_inf)), site_inf, ax=ax1, color=color1)
+    sns.lineplot(x=np.arange(start_time, start_time + len(site_inf)), y=site_inf, ax=ax1, color=color1)
     # convert xticks to dates
     xticklabels = [(dt.timedelta(days=int(i)) + dt.datetime(2020,1,1)) for i in ax1.get_xticks()]
     if matt_fig:
@@ -3895,7 +3895,7 @@ def b117_plot_alt(tv_file, variant_file, link_file, full_tv_file=None, start=355
     ax3.tick_params(axis='y', labelcolor='k', labelsize=TICK_FONTSIZE, width=SPINE_LW)
     ax3.set_ylabel('Frequency (%)', color='k', fontsize=AXES_FONTSIZE)
     ax3.set_yticklabels(['%.1f' % (100*float(i)) for i in ax3.get_yticks()])
-    sns.lineplot(np.arange(start_time, start_time + len(site_inf)), uk_traj[-len(site_inf):], color=color3, ax=ax3)
+    sns.lineplot(x=np.arange(start_time, start_time + len(site_inf)), y=uk_traj[-len(site_inf):], color=color3, ax=ax3)
     #ax3.axvline(x=t_detected, ymin=ymin3, ymax=(traj_detected / ymax3), color='k', linestyle='dashed')
     ax3.axhline(y=traj_detected, xmin=((t_detected-start_time)/(times_all[-1]-start_time)), xmax=1, color='k', linestyle='dashed')
     ax3.text(1.085, traj_detected, '%.3f' % traj_detected, fontsize=8, transform=ax3.transAxes, ha='center', va='center')
@@ -4072,8 +4072,8 @@ def auroc_plots_combined(sim_dir, t_dir, samp_dir, n_dir):
     
     def make_subplot(param_vals, beni, deli, parameter=None, axis=None, xticks=None):
         """ Make the subplot for the given parameters"""
-        sns.lineplot(param_vals, beni, color='cornflowerblue', lw=1, ax=axis)
-        sns.lineplot(param_vals, deli, color='lightcoral',     lw=1, ax=axis)
+        sns.lineplot(x=param_vals, y=beni, color='cornflowerblue', lw=1, ax=axis)
+        sns.lineplot(x=param_vals, y=deli, color='lightcoral',     lw=1, ax=axis)
         axis.set_ylim(0.6, 1)
         for line in ['right', 'top']:
             axis.spines[line].set_visible(False)
@@ -6046,7 +6046,7 @@ def syn_percentage_plots_old(file, link_file, link_file_all, syn_file, index_fil
         ax1.spines[line].set_visible(False)
     for line in ['left', 'bottom']:
         ax1.spines[line].set_linewidth(SPINE_LW)
-    sns.lineplot(np.arange(len(nonsyn_nonlinked))+1, 100*nonsyn_nonlinked, ax=ax1, lw=1, color=MAIN_COLOR)
+    sns.lineplot(x=np.arange(len(nonsyn_nonlinked))+1, y=100*nonsyn_nonlinked, ax=ax1, lw=1, color=MAIN_COLOR)
     ax1.axhline(100*nonsyn_nonlinked[-1], lw=1, color=COMP_COLOR, alpha=0.75)
     ax1.text(0.25, (100*nonsyn_nonlinked[-1]-syn_lower_limit)/(100-syn_lower_limit) - 0.05, 'Background', fontsize=6, transform=ax1.transAxes, ha='center', va='center')
     ax1.set_xscale('log')
@@ -6221,7 +6221,7 @@ def syn_percentage_plots(file, link_file, link_file_all, syn_file, index_file=No
         ax1.spines[line].set_visible(False)
     for line in ['left', 'bottom']:
         ax1.spines[line].set_linewidth(SPINE_LW)
-    sns.lineplot(np.arange(len(nonsyn_nonlinked))+1, 100*nonsyn_nonlinked, ax=ax1, lw=1, color=MAIN_COLOR)
+    sns.lineplot(x=np.arange(len(nonsyn_nonlinked))+1, y=100*nonsyn_nonlinked, ax=ax1, lw=1, color=MAIN_COLOR)
     ax1.axhline(100*nonsyn_nonlinked[-1], lw=1, color=COMP_COLOR, alpha=0.75)
     ax1.text(0.25, (100*nonsyn_nonlinked[-1]-syn_lower_limit)/(100-syn_lower_limit) - 0.05, 'Background', fontsize=6, transform=ax1.transAxes, ha='center', va='center')
     ax1.set_xscale('log')
@@ -6359,7 +6359,7 @@ def syn_percentage_plots_fast(file, link_file, link_file_all, syn_file, index_fi
         ax1.spines[line].set_visible(False)
     for line in ['left', 'bottom']:
         ax1.spines[line].set_linewidth(SPINE_LW)
-    sns.lineplot(np.arange(len(nonsyn_nonlinked))+1, 100*nonsyn_nonlinked, ax=ax1, lw=1, color=MAIN_COLOR)
+    sns.lineplot(x=np.arange(len(nonsyn_nonlinked))+1, y=100*nonsyn_nonlinked, ax=ax1, lw=1, color=MAIN_COLOR)
     ax1.axhline(100*nonsyn_nonlinked[-1], lw=1, color=COMP_COLOR, alpha=0.75)
     ax1.text(0.25, (100*nonsyn_nonlinked[-1]-syn_lower_limit)/(100-syn_lower_limit) - 0.05, 'Background', fontsize=6, transform=ax1.transAxes, ha='center', va='center')
     ax1.set_xscale('log')
@@ -6734,7 +6734,7 @@ def syn_plot(inf_file, syn_file, link_file):
         ax.spines[line].set_linewidth(SPINE_LW)
     ax.set_xlabel("Number of largest\ncoefficients", fontsize=AXES_FONTSIZE)
     ax.set_ylabel("Nonsynonymous (%)", fontsize=AXES_FONTSIZE)
-    sns.lineplot(np.arange(len(nonsyn_nonlinked))+1, 100*nonsyn_nonlinked, ax=ax, lw=0.3)
+    sns.lineplot(x=np.arange(len(nonsyn_nonlinked))+1, y=100*nonsyn_nonlinked, ax=ax, lw=0.3)
     ax.axhline(100*nonsyn_nonlinked[-1], lw=0.3, color='lightcoral', alpha=0.75)
     ax.text(-0.065, 0.175, f'{round(100*nonsyn_nonlinked[-1],1)}', color='lightcoral', fontsize=4, transform=ax.transAxes, ha='center', va='center')
     plt.gcf().subplots_adjust(bottom=0.3)
@@ -6743,7 +6743,7 @@ def syn_plot(inf_file, syn_file, link_file):
     
     fig2 = plt.figure(figsize=[SINGLE_COLUMN_WIDTH, SINGLE_COLUMN_WIDTH/1.618])
     ax2  = fig2.add_subplot(1,1,1)
-    sns.lineplot(np.arange(50), nonsyn_nonlinked[:50], ax=ax2, lw=0.3)
+    sns.lineplot(x=np.arange(50), y=nonsyn_nonlinked[:50], ax=ax2, lw=0.3)
     ax2.grid(b=True, axis='y', linewidth=0.2)
     ax2.set_ylim(0.6, 1)
     #plt.yticks(np.arange(11)/10)
@@ -6858,7 +6858,7 @@ def finite_sampling_plot(rep_folder, rep_perfect):
             
             # make plots
             ax0 = fig.add_subplot(grid[4*i-2:4*i+2, 0])
-            sns.lineplot(np.arange(len(pop_file)), pop_file, lw=0.5, ax=ax0)
+            sns.lineplot(x=np.arange(len(pop_file)), y=pop_file, lw=0.5, ax=ax0)
             ax0.spines['right'].set_linewidth(SPINE_LW)
             #ax0.set_yticks(yticks)
             #ax0.set_yticklabels(yticklabels)
@@ -7241,8 +7241,8 @@ def main(args):
         for i in range(simulations):
             plt.subplot(1, int(simulations), i+1)
             plt.title(f"simulation {i+1}")
-            sns.lineplot(np.arange(len(pop_size[i]))*record[i], pop_size[i], label="actual")
-            sns.lineplot(np.arange(len(pop_size[i]))*record[i], pop_size_assumed[i][:len(pop_size[i])], label="guessed")
+            sns.lineplot(x=np.arange(len(pop_size[i]))*record[i], y=pop_size[i], label="actual")
+            sns.lineplot(x=np.arange(len(pop_size[i]))*record[i], y=pop_size_assumed[i][:len(pop_size[i])], label="guessed")
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     
     """
@@ -7402,9 +7402,9 @@ def main(args):
             for k in range(simulations):
                 if allele_number[i] in mutant_sites[k]:
                     loc = np.where(np.array(mutant_sites[k])==allele_number[i])[0][0]    
-                    sns.lineplot(np.arange(len(traj[k][loc]))*record[k], traj[k][loc], color=colors_inf[i], lw=FREQ_LW, ax=ax)
+                    sns.lineplot(x=np.arange(len(traj[k][loc]))*record[k], y=traj[k][loc], color=colors_inf[i], lw=FREQ_LW, ax=ax)
                 else:
-                    sns.lineplot(np.arange(len(traj[0]))*record[k], np.zeros(len(traj[0])), ax=ax, lw=FREQ_LW)
+                    sns.lineplot(x=np.arange(len(traj[0]))*record[k], y=np.zeros(len(traj[0])), ax=ax, lw=FREQ_LW)
                     
         # plot histograms            
         rep_data     = np.load(arg_list.replicates, allow_pickle=True)
@@ -7601,7 +7601,7 @@ def main(args):
             
                 # make plots
                 ax0 = fig.add_subplot(grid[4*i-2:4*i+2, 0])
-                sns.lineplot(np.arange(len(pop_file)), pop_file, lw=0.5, ax=ax0)
+                sns.lineplot(x=np.arange(len(pop_file)), y=pop_file, lw=0.5, ax=ax0)
                 ax0.spines['right'].set_linewidth(SPINE_LW)
                 ax0.set_xticks([])
                 ax0.set_yticks([])

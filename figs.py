@@ -121,15 +121,15 @@ GOLDR      = (1.0 + np.sqrt(5)) / 2.0
 TICKLENGTH = 3
 TICKPAD    = 3
 
-# # paper style
-# FONTFAMILY    = 'Arial'
-# SIZESUBLABEL  = 8
-# SIZELABEL     = 6
-# SIZETICK      = 6
-# SMALLSIZEDOT  = 6.
-# SIZELINE      = 0.6
-# AXES_FONTSIZE = 6
-# AXWIDTH       = 0.4
+# paper style
+FONTFAMILY    = 'Arial'
+SIZESUBLABEL  = 8
+SIZELABEL     = 6
+SIZETICK      = 6
+SMALLSIZEDOT  = 6.
+SIZELINE      = 0.6
+AXES_FONTSIZE = 6
+AXWIDTH       = 0.4
 
 # # grant style
 # FONTFAMILY   = 'Arial'
@@ -140,14 +140,14 @@ TICKPAD    = 3
 # SIZELINE     = 0.6
 # AXWIDTH      = 0.4
 
-# slides style
-FONTFAMILY   = 'Avenir'
-SIZESUBLABEL = 18 #24 #14
-SIZELABEL    = 18 #14
-SIZETICK     = 18 #14
-SMALLSIZEDOT = 8. * 7
-SIZELINE     = 1.5
-AXWIDTH      = 1.0
+# # slides style
+# FONTFAMILY   = 'Avenir'
+# SIZESUBLABEL = 18 #24 #14
+# SIZELABEL    = 18 #14
+# SIZETICK     = 18 #14
+# SMALLSIZEDOT = 8. * 7
+# SIZELINE     = 1.5
+# AXWIDTH      = 1.0
 
 # circle plot formatting
 S_MULT   = 40*SMALLSIZEDOT #40*SMALLSIZEDOT
