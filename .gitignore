@@ -4,5 +4,8 @@ __pycache__
 .DS_Store
 */.DS_Store
 */*/.DS_Store
-drafts/
-old-scripts/
+drafts
+old-scripts
+data/old-data
+data/inflow-uk
+*.jar
