@@ -4,7 +4,7 @@
 This repository contains and data and scripts for reproducing the results accompanying the manuscript  
 
 ### Inferring effects of mutations on SARS-CoV-2 transmission from genomic surveillance data
-Brian Lee<sup>1</sup>, Ahmed Abdul Quadeer<sup>2,3</sup>, Muhammad Saqib Sohail<sup>2,4</sup>, Elizabeth Finney<sup>1</sup>, Syed Faraz Ahmed<sup>2,3,5</sup>, Matthew R. McKay<sup>2,3,4,5,6,#</sup> and John P. Barton<sup>1,7,8,#</sup>
+Brian Lee<sup>1</sup>, Ahmed Abdul Quadeer<sup>2,3</sup>, Muhammad Saqib Sohail<sup>2,4</sup>, Elizabeth Finney<sup>1</sup>, Syed Faraz Ahmed<sup>2,3,5</sup>, Matthew R. McKay<sup>2,3,5,6,#</sup> and John P. Barton<sup>1,7,8,#</sup>
 
 <sup>1</sup> Department of Physics and Astronomy, University of California, Riverside  
 <sup>2</sup> Department of Electronic and Computer Engineering, Hong Kong University of Science and Technology  
