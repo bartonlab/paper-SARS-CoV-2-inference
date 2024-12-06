@@ -16,7 +16,7 @@ import data_processing as dp
 import pandas as pd
 import lmdb
 
-REF_TAG = 'EPI_ISL_402125'
+REF_TAG = 'EPI_ISL_402124'
 MAX_AMBIGUOUS = 298
 ALPHABET    = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 alph_temp   = list(ALPHABET)
@@ -46,7 +46,7 @@ def find_ref_seq(msa_file, ref_tag=REF_TAG):
         elif found:
             ref_seq += data[0]
     print(f'refernece sequence length {len(ref_seq)}')
-    print(f'found {found}')
+    print(f'reference sequence found: {found}')
     print(ref_seq)
     #
     idxs_keep = []
@@ -115,7 +115,6 @@ def main(args):
     meta_file = arg_list.meta_file
     lmdb_dir  = arg_list.lmdbDir
     meta_out  = arg_list.metaNew
-    print2(os.getcwd())
     
     status_name = f'merge-status-lmdb-{arg_list.dbNumber}.csv'
     status_file = open(status_name, 'w')
@@ -172,19 +171,19 @@ def main(args):
                 if len(l) == 1:
                     l.append('NA')
                     l.append('NA')
-                    #l.append('NA')
+                    l.append('NA')
                     l.append('/'.join(m))
                     if accessions[i] != REF_TAG:
                         idxs_drop.append(i)    # drop sequence if there is no country level location information
                 if len(l) == 2:
-                    #l.append('NA')
+                    l.append('NA')
                     l.append('NA')
                     l.append('/'.join(m))
                 elif len(l) == 3:
-                    #l.append('NA')    # Comment this out to make london sequences location appear in the correct slot. 
+                    l.append('NA')    # Comment this out to make london sequences location appear in the correct slot. 
                     l.append('/'.join(m))
                 else:
-                    #l[4] += '/' + '/'.join(m)
+                    l[4] += '/' + '/'.join(m)
                     l.append('/'.join(m))
                 #elif len(l) == 4:
                 #    l.append('/'.join(m))
@@ -255,6 +254,7 @@ def main(args):
     if not os.path.exists(lmdb_dir):
         os.mkdir(lmdb_dir)
     max_seqs = 5E5    # the maximum sequences allowed in each database    
+    map_size = int(7E10)   # map_size parameter for lmdb's
         
 
     # Add sequences to the MSA if corresponding tags exist in the metadata
@@ -266,10 +266,11 @@ def main(args):
     
     if arg_list.dbNumber==1:
         idxs_keep, ref_seq = np.array(find_ref_seq(msa_file))
-        ref_file = arg_list.refFile
-        index_ref_seq(ref_seq, ref_file)
+        if arg_list.refFile:
+            ref_file = arg_list.refFile
+            index_ref_seq(ref_seq, ref_file)
         idxs_keep = np.array(idxs_keep)
-        print(idxs_keep)
+        print2(idxs_keep)
         idxs_keep = idxs_keep.astype('int32')
     if arg_list.refOnly:
         sys.exit()
@@ -297,14 +298,17 @@ def main(args):
             if counter % max_seqs == 0:
                 # save partial alignment of max_seqs number of sequences to a database
                 if db_counter!=arg_list.dbNumber:
+                    print2(f'database counter {db_counter}')
+                    print2(f'database number {int(counter / max_seqs)}')
                     db_counter += 1
+                    print2(f'{counter} sequences scanned through')
                     continue
-                print2(f'{counter} sequences in msa analyzed')
+                print2(f'saving group of {len(accessions_list)} sequences')
                 db_start_time = timer()
                 data   = [(accessions_list[i], sequences[i]) for i in range(len(sequences))]
                 db_num = int(counter / max_seqs)
                 db_dir = os.path.join(lmdb_dir, f'db-{db_num}')
-                env    = lmdb.open(db_dir, map_size=int(1E12), max_dbs=100, max_readers=2000, writemap=True)    # make enviornment
+                env    = lmdb.open(db_dir, map_size=map_size, max_dbs=100, max_readers=2000, writemap=True)    # make enviornment
                 
                 with env.begin(write=True) as txn:    # transaction to clear any existing data stored in the database
                     with txn.cursor() as crs:
@@ -315,18 +319,14 @@ def main(args):
                     with txn.cursor() as crs:
                         result = crs.putmulti(data)
                         #print2(result)
-                        
-                        #try:
-                        #    result = crs.putmulti(data)    # write data
-                        #except TypeError:
-                        #    print([type(i) for i in data])
-                        #    print(data)
-                        #print2(result)   
+                          
                 db_end_time = timer()
                 print2(f'took {(db_end_time - db_start_time) / 60} minutes to write the sequences to the database number {db_num}')
-                accessions_list = []    # reset accession list
-                sequences       = []    # reset sequence list
                 db_counter += 1
+                break
+                #accessions_list = []    # reset accession list
+                #sequences       = []    # reset sequence list
+                #db_counter += 1
             tag = data[0][1:]
             seq = ''
             if isinstance(tag, str):
@@ -346,11 +346,18 @@ def main(args):
                 seq += data[0]     
                 
     # write the final sequences to a final database
+    print2(f'database counter {db_counter}')
+    print2(f'database number {int(counter / max_seqs)}')
+    if db_counter!=arg_list.dbNumber:
+        print2('database counter not equal to input database counter')
+        sys.exit()
+        
+    print2(f'saving the final group of sequences')
     db_start_time = timer()
     data   = [(accessions_list[i], sequences[i]) for i in range(len(sequences))]
     db_num = int(counter / max_seqs) + 1
     db_dir = os.path.join(lmdb_dir, f'db-{db_num}')
-    env    = lmdb.open(db_dir, map_size=int(1E12), max_dbs=100, max_readers=2000, writemap=True)    # make enviornment
+    env    = lmdb.open(db_dir, map_size=map_size, max_dbs=100, max_readers=2000, writemap=True)    # make enviornment
                 
     with env.begin(write=True) as txn:    # transaction to clear any existing data stored in the database
         with txn.cursor() as crs:
@@ -363,7 +370,7 @@ def main(args):
             print2(result)
     db_end_time = timer()
     print2(f'took {(db_end_time - db_start_time) / 60} minutes to write the sequences to the database number {db_num}')
-    print2(f'total number of sequences in the database is {counter}')
+    print2(f'total number of sequences is {counter}')
 
         
         

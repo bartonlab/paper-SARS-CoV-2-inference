@@ -254,6 +254,7 @@ def main():
         region_start_time = timer()
         # Data processing, time ordering, and quality checks
         ## - put sequences in time order (first entry is reference sequence)
+        
         print2('\ttime-ordering sequences...')
         #if s_region == 'england_wales_scotland':
         #    dates = ['2020-01-02', '2020-11-03', '2021-01-19', '2021-03-09', '2021-05-13', '2021-06-26', '2021-07-23', '2021-08-16',
@@ -267,26 +268,27 @@ def main():
         print2('\ttime-ordering took %d seconds' % (region_timeorder_time - region_start_time))
         
         ## - write region names to files separated by number of sequences
-        #if s_subregion == None:
-        #    s_subregion=='None'
         if len(temp_tag) < maxSeqs:
             region_names.append([s_continent, s_country, s_region, s_subregion, date_lower, date_upper])
         else:
             L     = len(temp_tag)
-            if not s_region == 'england_wales_scotland':
-                dates = [temp_times[i*maxSeqs] for i in range(int(L / maxSeqs) + 1)] + [temp_times[-1]]
-                dates = [toisoformat(i) for i in dates]
+            #if not s_region == 'england_wales_scotland':
+            dates = [temp_times[i*maxSeqs] for i in range(int(L / maxSeqs) + 1)] + [temp_times[-1]]
+            dates = [toisoformat(i) for i in dates]
             for i in range(len(dates) - 1):
                 region_names.append([s_continent, s_country, s_region, s_subregion, dates[i], dates[i+1]])
                 
     for group in region_names:
-        new = np.array(group)[np.array(group)!=None]
+        #print(group)
+        #new = np.array(group)[np.array(group)!=None]
+        new = [i for i in group if i is not None]
         contains_list = False
         for i in new:
             if not isinstance(i, str):
                 contains_list = True
         if contains_list:
             label = ''
+            alt   = []
             for i in new:
                 if isinstance(i, str):
                     label += i
@@ -299,9 +301,16 @@ def main():
                         label += '_'.join(i)
                 if i!=new[-1]:
                     label += '-'
+            for i in group:
+                if isinstance(i, str) or isinstance(i, type(None)):
+                    alt.append(i)
+                else:
+                    alt.append('_'.join(i))
+            group = alt
         else:
             label = '-'.join(new)
         f = open(os.path.join(out_dir, label + '.npy'), mode='wb')
+        # THE BELOW SEEMNS TO HAVE A BUG WHEN THE GROUP CONTAINS LISTS AS ELEMENTS (DUE TO np.asanyarray) ON SOME PYTHON VERSIONS
         np.save(f, [group])
         f.close()
     

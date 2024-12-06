@@ -21,130 +21,6 @@ REF_TAG = 'EPI_ISL_402125'
 NUC     = ['-', 'A', 'C', 'G', 'T']
 
 
-def get_MSA(ref, noArrow=True):
-    """Take an input FASTA file and return the multiple sequence alignment, along with corresponding tags. """
-    
-    temp_msa = [i.split('\n') for i in open(ref).readlines()]
-    temp_msa = [i for i in temp_msa if len(i)>0]
-    
-    msa = []
-    tag = []
-    
-    for i in temp_msa:
-        if i[0][0]=='>':
-            msa.append('')
-            if noArrow: tag.append(i[0][1:])
-            else: tag.append(i[0])
-        else: msa[-1]+=i[0]
-    
-    msa = np.array(msa)
-    
-    return msa, tag
-
-
-def get_label(i, d=5):
-    """ For a SARS-CoV-2 reference sequence index i, return the label in the form 'coding region - protein number'. 
-    For example, 'ORF1b-204'."""
-    i_residue = str(i % d)
-    i = int(i) / d
-    frame_shift = str(i - get_codon_start_index(i))
-    if   (25392<=i<26220):
-        return "ORF3a-" + str(int((i - 25392) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (26244<=i<26472):
-        return "E-"     + str(int((i - 26244) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (27201<=i<27387):
-        return "ORF6-"  + str(int((i - 27201) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (27393<=i<27759):
-        return "ORF7a-" + str(int((i - 27393) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (27755<=i<27887):
-        return "ORF7b-" + str(int((i - 27755) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (  265<=i<805):
-        return "NSP1-"  + str(int((i - 265  ) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (  805<=i<2719):
-        return "NSP2-"  + str(int((i - 805  ) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif ( 2719<=i<8554):
-        return "NSP3-"  + str(int((i - 2719 ) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # Compound protein containing a proteinase, a phosphoesterase transmembrane domain 1, etc.
-    elif ( 8554<=i<10054):
-        return "NSP4-"  + str(int((i - 8554 ) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # Transmembrane domain 2
-    elif (10054<=i<10972):
-        return "NSP5-"  + str(int((i - 10054) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # Main proteinase
-    elif (10972<=i<11842):
-        return "NSP6-"  + str(int((i - 10972) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # Putative transmembrane domain
-    elif (11842<=i<12091):
-        return "NSP7-"  + str(int((i - 11842) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (12091<=i<12685):
-        return "NSP8-"  + str(int((i - 12091) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (12685<=i<13024):
-        return "NSP9-"  + str(int((i - 12685) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # ssRNA-binding protein
-    elif (13024<=i<13441):
-        return "NSP10-" + str(int((i - 13024) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # CysHis, formerly growth-factor-like protein
-    # Check that aa indexing is correct for NSP12, becuase there is a -1 ribosomal frameshift at 13468. It is not, because the amino acids in the first frame
-    # need to be added to the counter in the second frame.
-    elif (13441<=i<13467):
-        return "NSP12-" + str(int((i - 13441) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (13467<=i<16236):
-        return "NSP12-" + str(int((i - 13467) / 3) + 10) + '-' + frame_shift + '-' + i_residue
-            # RNA-dependent RNA polymerase
-    elif (16236<=i<18039):
-        return "NSP13-" + str(int((i - 16236) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # Helicase
-    elif (18039<=i<19620):
-        return "NSP14-" + str(int((i - 18039) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # 3' - 5' exonuclease
-    elif (19620<=i<20658):
-        return "NSP15-" + str(int((i - 19620) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # endoRNAse
-    elif (20658<=i<21552):
-        return "NSP16-" + str(int((i - 20658) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # 2'-O-ribose methyltransferase
-    elif (21562<=i<25384):
-        return "S-"     + str(int((i - 21562) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (28273<=i<29533):
-        return "N-"     + str(int((i - 28273) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (29557<=i<29674):
-        return "ORF10-" + str(int((i - 29557) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (26522<=i<27191):
-        return "M-"     + str(int((i - 26522) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (27893<=i<28259):
-        return "ORF8-"  + str(int((i - 27893) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    else:
-        return "NC-"    + str(int(i))
-    
-def get_codon_start_index(i, d=5):
-    """ Given a sequence index i, determine the codon corresponding to it. """
-    i = int(i/d)
-    if   (13467<=i<=21554):
-        return i - (i - 13467)%3
-    elif (25392<=i<=26219):
-        return i - (i - 25392)%3
-    elif (26244<=i<=26471):
-        return i - (i - 26244)%3
-    elif (27201<=i<=27386):
-        return i - (i - 27201)%3
-    elif (27393<=i<=27886):
-        return i - (i - 27393)%3
-    elif (  265<=i<=13482):
-        return i - (i - 265  )%3
-    elif (21562<=i<=25383):
-        return i - (i - 21562)%3
-    elif (28273<=i<=29532):
-        return i - (i - 28273)%3
-    elif (29557<=i<=29673):
-        return i - (i - 29557)%3
-    elif (26522<=i<=27190):
-        return i - (i - 26522)%3
-    elif (27893<=i<=28258):
-        return i - (i - 27893)%3
-    else:
-        return 0
-
-
 def main(args):
     """Infer selection coefficients from individual files containing the covariance, trajectory, and single site frequencies for different regions"""
     
@@ -242,17 +118,26 @@ def main(args):
         filename  = file
         filepath  = os.path.join(directory_str, filename)
         if os.path.isdir(filepath):
+            if 'tv_covar' in filepath:
+                continue
             dates.append(int(file))
             continue
             
-        location  = filename[:-4]
+        location    = filename[:-4]
+        if location.find('---')!=-1:
+            location = location[:location.find('---')]
         region_temp = location.split('-')
-        if region_temp[3].find('2')==-1:
-            region = '-'.join(region_temp[:4])
-        else:
-            region = '-'.join(region_temp[:3])
+        print(region_temp)
+        #if region_temp[3].find('2')==-1:
+        #    region = '-'.join(region_temp[:4])
+        #else:
+        #    region = '-'.join(region_temp[:3])
+        while np.any(np.isin(list('0123456789'), region_temp[-1])):
+            region_temp = region_temp[:-1]
+        region = '-'.join(region_temp)
         if region[-1]=='-':
             region = region[:-1]
+        print(region)
             
         print(f'\tloading location {location}')
         data = np.load(filepath, allow_pickle=True)  # Genome sequence data
@@ -271,28 +156,13 @@ def main(args):
     
     # Finds all submission times
     unique_times = np.unique(dates)
-    #max_times    = [np.amax(i) for i in dates]
-    #min_times    = [np.amin(i) for i in dates]
-    #dates_full   = np.arange(np.amin(min_times), np.amax(max_times) + 1)
     min_time     = np.amin(dates)
     max_time     = np.amax(dates)
     dates_full   = np.arange(min_time, max_time+1)
-    #print(dates)
-    #print(dates_full)
     coefficient  = np.mean(pop_size) * np.mean(k) * np.mean(R) / (np.mean(R) + np.mean(k))
     g1 *= coefficient  # The regularization
     
     # Find final times for each location file 
-    """
-    final_times = []    # the last submission date for which a region has data
-    for file in filenames:
-        time = dates_full[0]
-        i = 0
-        while os.path.exists(os.path.join(directory_str, str(time), file)):
-            i += 1
-            time = dates_full[i]
-        final_times.append(time - 1)     
-    """
     final_times = []
     for file in filenames:
         times_file = np.array([t for t in dates_full if os.path.exists(os.path.join(directory_str, str(t), file))])
@@ -389,10 +259,6 @@ def main(args):
         # save covariance and RHS at this time
         b_t *= coefficient 
         #np.savez_compressed(os.path.join(covar_out_dir, f'covar---{date}.npz'), covar=A_t, RHS=b_t)
-        print(f'max b = {np.amax(b_t)}')
-        print(f'max covar = {np.amax(A_t)}')
-        print(f'mean b = {np.mean(b_t)}')
-        print(f'mean covar = {np.mean(A_t)}')
         
         if timed > 1:
             save_covar_time = timer()
@@ -407,8 +273,6 @@ def main(args):
             system_solve_time  = timer()
             print2(f'solving the system of equations took {system_solve_time - save_covar_time} seconds')
         
-        #error_bars_temp        = np.sqrt(np.absolute(np.diag(np.linalg.inv(A_t))))
-        #error_bars_temp        = 1 / np.sqrt(np.absolute(np.diag(A_t)))
         selection_nocovar_temp = b_t / np.diag(A_t)
         
         # Normalize selection coefficients so reference allele has selection coefficient of zero
@@ -429,7 +293,6 @@ def main(args):
         print2(f'normalizing selection coefficients for time {date} completed')
         selection.append(np.array(s_new).flatten())
         selection_nocovar.append(np.array(s_SL).flatten())
-        #error_bars.append(np.array(error_bars_temp))
         t_infer.append(date)
         s_new = s_new.flatten()
         s_SL  = s_SL.flatten()
@@ -440,7 +303,7 @@ def main(args):
             print2(f'normalizing the selection coefficients took {normalization_time - system_solve_time} seconds')
         
         print2(out_str + f'---{date}.npz')
-        np.savez_compressed(out_str + f'---{date}.npz', selection=s_new, selection_independent=s_SL, allele_number=allele_new)
+        #np.savez_compressed(out_str + f'---{date}.npz', selection=s_new, selection_independent=s_SL, allele_number=allele_new)
     
         if timed > 0:
             t_solve_new = timer()

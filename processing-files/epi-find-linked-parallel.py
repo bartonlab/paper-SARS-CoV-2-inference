@@ -25,27 +25,6 @@ REF_TAG = 'EPI_ISL_402125'
 NUC     = ['-', 'A', 'C', 'G', 'T']
 
 
-def get_MSA(ref, noArrow=True):
-    """Take an input FASTA file and return the multiple sequence alignment, along with corresponding tags. """
-    
-    temp_msa = [i.split('\n') for i in open(ref).readlines()]
-    temp_msa = [i for i in temp_msa if len(i)>0]
-    
-    msa = []
-    tag = []
-    
-    for i in temp_msa:
-        if i[0][0]=='>':
-            msa.append('')
-            if noArrow: tag.append(i[0][1:])
-            else: tag.append(i[0])
-        else: msa[-1]+=i[0]
-    
-    msa = np.array(msa)
-    
-    return msa, tag
-
-
 def find_linked_pairs(single, double, alleles, tol=0.8, q=5, ref_poly=None, min_counts=10):
     """ Takes the single and double site counts and finds pairs of mutations that are linked."""
     
@@ -121,69 +100,6 @@ def find_linked_pairs_region(single, double, alleles, linked_pairs, ref_poly=Non
     return linked_pairs
 
 
-def find_linked_groups(single, double, alleles, tol=0.8):
-    """ Takes the single and double site counts and finds groups of linked sites. 
-    A potential issue arises in skipping terms that that have already been added to a group. 
-    This is because if a and b are linked and b and c are linked, a and c might not be linked.
-    So if you skip b after finding that a and b are linked, c will not be added to the group.
-    NEEDS TESTING"""
-    
-    L = len(single)
-    linked_groups = []
-    sites_used    = []
-    for i in range(L):
-        new = True
-        if alleles[i] in sites_used:
-            continue
-        else:
-            group = [alleles[i]]
-            sites_used.append(alleles[i])
-            for j in range(i+i, L):
-                if double[i,j]/single[i]>tol and double[i][j]/single[j]>tol:
-                    group.append(alleles[j])
-                    sites_used.append(alleles[j])
-            if len(group)>1:
-                linked_groups.append(group)
-    return linked_groups
-
-
-def find_linked_groups_alt(single, double, alleles, tol=0.8):
-    """ Takes the single and double site counts and finds groups of linked sites. 
-    Attempts to fix the issue that the version above has.
-    NEEDS TESTING"""
-    
-    L = len(single)
-    linked_groups = []
-    sites_used    = []
-    for i in range(L):
-        #print(f'finding sites linked to coefficient {i} out of {L} total sites.')
-        new = True
-        if alleles[i] in sites_used:
-            idx   = np.nonzero([alleles[i] in j for j in linked_groups])[0][0]
-            group = linked_groups[idx]
-            new   = False
-        else:
-            group = [alleles[i]]
-            #sites_used.append(alleles[i])
-        for j in range(i+i, L):
-            if double[i,j]/single[i]>tol and double[i][j]/single[j]>tol:
-                if alleles[j] not in sites_used:
-                    group.append(alleles[j])                    
-                    sites_used.append(alleles[j])
-                else:
-                    idx2 = np.nonzero([alleles[j] in k for k in linked_groups])[0][0]
-                    for k in linked_groups[idx2]:
-                        group.append(k)
-                    if new:
-                        linked_groups[idx2] = group
-                        new = False
-                    else:
-                        linked_groups.pop(idx2)
-        if len(group)>1 and new:
-            linked_groups.append(group)
-    return linked_groups
-
-
 def combine_linked_sites2(linked_sites):
     """ Combines the pairs of linked sites into lists of mutually linked sites.
     FUTURE: Try making a set of all sites linked to a site for each site. 
@@ -250,32 +166,6 @@ def combine_linked_sites2(linked_sites):
             linked_new.append(new_series)
     return linked_new
     
-    
-def find_frequencies_linked(linked_sites, single, double, alleles):
-    """ Find and return the single and the double site frequencies for all sites in each group of linked sites"""
-    
-    nucs        = [dp.get_label_orf(i) for i in alleles]
-    single_freq = []
-    double_freq = []
-    new_sites   = []
-    for group in linked_sites:
-        single_temp = []
-        double_temp = []
-        sites_temp  = []
-        for i in range(len(group)):
-            if group[i] not in nucs:
-                print(group[i])
-            else:
-                single_temp.append(single[nucs.index(group[i])])
-                sites_temp.append(group[i])
-                for j in range(i+1, len(group)):
-                    if group[j] in nucs:
-                        double_temp.append(double[nuc.index(group[i]), nuc.index(group[j])])
-        single_freq.append(single_temp)
-        double_freq.append(double_temp)
-        new_sites.append(sites_temp)
-    
-    return new_sites, single_freq, double_freq
 
 
 def main(args):
@@ -286,18 +176,16 @@ def main(args):
     parser.add_argument('-o',            type=str,    default='linked-sites',          help='output file')
     parser.add_argument('--out_dir',     type=str,    default=None,                    help='directory to write linked files to')
     parser.add_argument('--data',        type=str,    default=None,                    help='directory to .npz files containing the counts, sequences, times, and mutant_sites for different locations')
-    parser.add_argument('--g1',          type=float,  default=1,                       help='regularization restricting the magnitude of the selection coefficients')
     parser.add_argument('--freq_cutoff', type=float,  default=0.05,                    help='if a mutant frequency never rises above this number, it will not be used for inference')
-    parser.add_argument('--link_tol',    type=float,  default=0.9,                     help='the tolerance for correlation check used for determining linked sites')
+    parser.add_argument('--link_tol',    type=float,  default=0.8,                     help='the tolerance for correlation check used for determining linked sites')
     parser.add_argument('--minCounts',   type=int,    default=10,                      help='the minimum number of times a mutation must be observed in order to be added to groups of linked sites')
-    parser.add_argument('--c_directory', type=str,    default='Archive-alt2',          help='directory containing the c++ scripts')
     parser.add_argument('--timed',       type=int,    default=0,                       help='whether or not the program is timed')
     parser.add_argument('-w',            type=int,    default=10,                      help='the window size')
     parser.add_argument('-q',            type=int,    default=1,                       help='the number of states at each site')
     parser.add_argument('--refFile',     type=str,    default=None,                    help='the file containing the reference sequence and site indices')
     #parser.add_argument('--find_linked_anywhere', action='store_true', default=False,  help='whether or not to find sites that are linked in any region')
     parser.add_argument('--findLinkedRegional', action='store_true', default=False,  help='whether or not to find sites are linked in each region')
-    parser.add_argument('--multisite',            action='store_true', default=False,  help='whether or not to to use multiple states at the same site')
+    parser.add_argument('--multisite',          action='store_true', default=False,  help='whether or not to to use multiple states at the same site')
     
     arg_list = parser.parse_args(args)
     
@@ -305,8 +193,6 @@ def main(args):
     freq_cutoff   = arg_list.freq_cutoff
     link_tol      = arg_list.link_tol
     directory_str = arg_list.data
-    c_directory   = arg_list.c_directory
-    g1            = arg_list.g1
     timed         = arg_list.timed
     window        = arg_list.w
     q             = arg_list.q
@@ -329,7 +215,7 @@ def main(args):
     if os.getcwd().split('/')[1]=='rhome':
         status_name = '/rhome/blee098/linked-sites-status.csv'
     else:
-        status_name = '/Users/brianlee/Desktop/linked-sites-status.csv'
+        status_name = 'linked-sites-status.csv'
     stat_file   = open(status_name, 'w')
     stat_file.close()
     
@@ -340,109 +226,6 @@ def main(args):
         stat_file.write(string+'\n')
         stat_file.close()
         print(string)
-    
-    
-    def allele_counter(nVec, sVec, mutant_sites_samp, q=q):
-        """ Calculates the counts for each allele. """
-        if q == 1:
-            single = np.zeros((len(mutant_sites_samp)))
-            for i in range(len(mutant_sites_samp)):
-                single[i] += np.sum([np.sum([nVec[t][j] * sVec[t][j][i] for j in range(len(sVec[t]))]) for t in range(len(nVec))])
-        else:
-            single = np.zeros(len(mutant_sites_samp) * q)
-            for t in range(len(nVec)):
-                for i in range(len(mutant_sites_samp)):
-                    for j in range(len(nVec[t])):
-                        single[i * q + sVec[t][j][i]] += nVec[t][j]
-        return single
-    
-    
-    def max_freq_counter(nVec, sVec, mutant_sites_samp, q=q):
-        """ Calculates the counts for each allele. """
-        norm = np.array([np.sum(nVec[t]) for t in range(len(nVec))])
-        norm[norm==0]==1
-        if q == 1:
-            single = np.zeros((len(mutant_sites_samp)))
-            for i in range(len(mutant_sites_samp)):
-                single[i] += np.amax([np.sum([nVec[t][j] * sVec[t][j][i] for j in range(len(sVec[t]))]) / norm[t] for t in range(len(nVec))]) 
-        else:
-            single = np.zeros(len(mutant_sites_samp) * q)
-            for t in range(len(nVec)):
-                for j in range(len(nVec[t])):
-                    for i in range(len(mutant_sites_samp)):
-                        single[i * q + sVec[t][j][i]] += nVec[t][j]
-        return single
-    
-    
-    def max_freq(sVec, nVec, mutant_sites_samp, allele_number, window):
-        """ Finds the maximum frequency that a mutation reaches in a particular population, 
-        and if it is greater than the cutoff frequency, the name of the mutation site is appended
-        to the allele_number variable. """
-        
-        Q = np.ones(len(nVec))
-        for t in range(len(nVec)):
-            if len(nVec[t]) > 0:
-                Q[t] = np.sum(nVec[t])
-        max_freq = np.zeros(len(mutant_sites_samp))
-        for i in range(len(mutant_sites_samp)):
-            for k in range(window):
-                max_freq[i] += np.sum([nVec[k][j] * sVec[k][j][i] for j in range(len(sVec[k])) ]) / (window * Q[k])
-        for t in range(1, len(nVec) - window + 1):
-            new_freq = np.zeros(len(mutant_sites_samp))
-            for i in range(len(mutant_sites_samp)):
-                for k in range(window):
-                    if Q[t] > 0:
-                        new_freq[i] += np.sum([nVec[t+k][j] * sVec[t+k][j][i] for j in range(len(sVec[t+k]))]) / (window * Q[t+k])
-            max_freq = np.maximum(max_freq, new_freq)
-        for i in range(len(mutant_sites_samp)):
-            if (max_freq[i] > freq_cutoff) and (mutant_sites_samp[i] not in allele_number):
-                allele_number.append(mutant_sites_samp[i])
-                
-                
-    def max_freq2(sVec, nVec, mutant_sites_samp, allele_number, window):
-        """ Finds the maximum frequency that a mutation reaches in a particular population, 
-        and if it is greater than the cutoff frequency, the name of the mutation site is appended
-        to the allele_number variable. """
-        
-        Q = np.ones(len(nVec))
-        for t in range(len(nVec)):
-            if len(nVec[t]) > 0:
-                Q[t] = np.sum(nVec[t])
-        max_freq = np.zeros(len(mutant_sites_samp))
-        for i in range(len(mutant_sites_samp)):
-            for k in range(window):
-                max_freq[i] += np.sum([nVec[k][j] * sVec[k][j][i] for j in range(len(sVec[k])) ]) / (window * Q[k])
-        new_freq = np.zeros(len(mutant_sites_samp))
-        for t in range(1, len(nVec) - window):
-            for i in range(len(mutant_sites_samp)):
-                new_freq[i] += np.sum([nVec[t+window][j] * sVec[t+window][j][i] for j in range(len(sVec[t+window]))]) / (window * Q[t+window])
-                new_freq[i] -= np.sum([nVec[t][j] * sVec[t][j][i] for j in range(len(sVec[t]))]) / (window * Q[t])
-            max_freq = np.maximum(max_freq, new_freq)
-        for i in range(len(mutant_sites_samp)):
-            if (max_freq[i] > freq_cutoff) and (mutant_sites_samp[i] not in allele_number):
-                allele_number.append(mutant_sites_samp[i])
-                
-    
-    def filter_sites_alternative(sVec_full, nVec_full, mutant_sites, allele_number):
-        """ eliminate sites whose frequency is too small """
-        
-        sVec_full_new    = []
-        mutant_sites_new = []
-        for sim in range(simulations):
-            #nVec    = nVec_full[sim]
-            sVec = sVec_full[sim]
-            mutants = mutant_sites[sim]
-            #nVec_new    = []
-            sVec_new = []
-            mask = [(mutants[i] == allele_number).any() for i in range(len(mutants))]
-            for t in range(len(sVec)):
-                sVec_t = []
-                for seq in sVec[t]:
-                    sVec_t.append(np.array(np.array(seq)[mask]))
-                sVec_new.append(np.array(sVec_t))
-            sVec_full_new.append(np.array(sVec_new))
-            mutant_sites_new.append(np.array(mutants)[mask])
-        return mutant_sites_new, sVec_full_new
     
 
     if timed > 0:
@@ -532,27 +315,6 @@ def main(args):
             for k in range(i + 1, len(mutant_sites)):
                 double_counts[positions[i] * q : (positions[i] + 1) * q, positions[k] * q : (positions[k] + 1) * q] += double_temp[i * q : (i + 1) * q, k * q : (k + 1) * q]
                 double_counts[positions[k] * q : (positions[k] + 1) * q, positions[i] * q : (positions[i] + 1) * q] += double_temp[k * q : (k + 1) * q, i * q : (i + 1) * q]
-        """
-        for i in range(len(mutant_sites)):
-            for j in range(q):
-                single_counts[positions[i] * q + j] += single_temp[i * q + j]
-                for k in range(i + 1, len(mutant_sites)):
-                    for l in range(q):
-                        double_counts[positions[i] * q + j, positions[k] * q + l] += double_temp[i * q + j, k * q + l]
-                        double_counts[positions[k] * q + l, positions[i] * q + j] += double_temp[i * q + j, k * q + l]
-        """
-        
-        """
-        for i in range(len(mutant_sites)):
-            loc = list(allele_number).index(mutant_sites[i])
-            for k in range(q):
-                single_counts[loc * q + k] += single_temp[i * q + k]
-                for j in range(1, len(mutant_sites)):
-                    loc2 = list(allele_number).index(mutant_sites[j])
-                    for l in range(q):
-                        double_counts[loc  * q + k, loc2 * q + l] += double_temp[i * q + k, j * q + l]
-                        double_counts[loc2 * q + l, loc  * q + k] += double_temp[i * q + k, j * q + l]
-        """
                         
         if timed > 0:
             t_end_combo = timer()
@@ -633,15 +395,22 @@ def main(args):
         np.save(link_outfile+'-alleles.npy', linked_muts)
         np.save(link_outfile+'.npy', linked_sites)
     else:
-        np.save(link_outfile+'-alleles.npy', linked_muts)
         linked_sites = []
         for group in linked_muts:
             new_group = []
             for j in group:
                 new_site = dp.get_label_new(j)
                 new_group.append(new_site)
-            linked_sites.append(new_group)
+            linked_sites.append(np.array(new_group, dtype=object))
+        f = open(link_outfile+'.csv', 'w')
+        for l in linked_sites:
+            f.write(','.join(l))
+            f.write('\n')
+        f.close()
+        #linked_sites = np.array(linked_sites)
         np.save(link_outfile+'.npy', linked_sites)
+        linked_muts = [np.array(i, dtype=object) for i in linked_muts]
+        np.save(link_outfile+'-alleles.npy', linked_muts)
     
     #np.savez_compressed(os.path.join(out_dir, 'nucleotide-counts.npz'), allele_number=allele_number, counts=single_counts)
     

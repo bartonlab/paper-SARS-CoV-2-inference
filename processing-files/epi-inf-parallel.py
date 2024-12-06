@@ -16,123 +16,11 @@ import datetime as dt
 import subprocess
 import pandas as pd
 from scipy import linalg
+import data_processing as dp
 
 #REF_TAG = 'EPI_ISL_402125'
 NUC     = ['-', 'A', 'C', 'G', 'T']
 NUMBERS = list('0123456789')
-
-def get_codon_start_index(i):
-    """ Given a sequence index i, determine the index of the first nucleotide in the codon. """
-    if   (13467<=i<=21554):
-        return i - (i - 13467)%3
-    elif (25392<=i<=26219):
-        return i - (i - 25392)%3
-    elif (26244<=i<=26471):
-        return i - (i - 26244)%3
-    elif (27201<=i<=27386):
-        return i - (i - 27201)%3
-    # new to account for overlap of orf7a and orf7b
-    #elif (27393<=i<=27754):
-    #    return i - (i - 27393)%3
-    #elif (27755<=i<=27886):
-    #    return i - (i - 27755)%3
-    ### considered orf7a and orf7b as one reading frame (INCORRECT)
-    elif (27393<=i<=27886):
-        return i - (i - 27393)%3
-    ### REMOVE ABOVE
-    elif (  265<=i<=13467):
-        return i - (i - 265  )%3
-    elif (21562<=i<=25383):
-        return i - (i - 21562)%3
-    elif (28273<=i<=29532):
-        return i - (i - 28273)%3
-    elif (29557<=i<=29673):
-        return i - (i - 29557)%3
-    elif (26522<=i<=27190):
-        return i - (i - 26522)%3
-    elif (27893<=i<=28258):
-        return i - (i - 27893)%3
-    else:
-        return 0
-
-
-def get_label(i, d=5):
-    """ For a SARS-CoV-2 reference sequence index i, return the label in the form 'coding region - protein number'. 
-    For example, 'ORF1b-204'."""
-    i_residue = str(i % d)
-    i = int(i) / d
-    frame_shift = str(i - get_codon_start_index(i))
-    if   (25392<=i<26220):
-        return "ORF3a-" + str(int((i - 25392) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (26244<=i<26472):
-        return "E-"     + str(int((i - 26244) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (27201<=i<27387):
-        return "ORF6-"  + str(int((i - 27201) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (27393<=i<27759):
-        return "ORF7a-" + str(int((i - 27393) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (27755<=i<27887):
-        return "ORF7b-" + str(int((i - 27755) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (  265<=i<805):
-        return "NSP1-"  + str(int((i - 265  ) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (  805<=i<2719):
-        return "NSP2-"  + str(int((i - 805  ) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif ( 2719<=i<8554):
-        return "NSP3-"  + str(int((i - 2719 ) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # Compound protein containing a proteinase, a phosphoesterase transmembrane domain 1, etc.
-    elif ( 8554<=i<10054):
-        return "NSP4-"  + str(int((i - 8554 ) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # Transmembrane domain 2
-    elif (10054<=i<10972):
-        return "NSP5-"  + str(int((i - 10054) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # Main proteinase
-    elif (10972<=i<11842):
-        return "NSP6-"  + str(int((i - 10972) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # Putative transmembrane domain
-    elif (11842<=i<12091):
-        return "NSP7-"  + str(int((i - 11842) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (12091<=i<12685):
-        return "NSP8-"  + str(int((i - 12091) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (12685<=i<13024):
-        return "NSP9-"  + str(int((i - 12685) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # ssRNA-binding protein
-    elif (13024<=i<13441):
-        return "NSP10-" + str(int((i - 13024) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # CysHis, formerly growth-factor-like protein
-    # Check that aa indexing is correct for NSP12, becuase there is a -1 ribosomal frameshift at 13468. It is not, because the amino acids in the first frame
-    # need to be added to the counter in the second frame.
-    elif (13441<=i<13467):
-        return "NSP12-" + str(int((i - 13441) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (13467<=i<16236):
-        return "NSP12-" + str(int((i - 13467) / 3) + 10) + '-' + frame_shift + '-' + i_residue
-            # RNA-dependent RNA polymerase
-    elif (16236<=i<18039):
-        return "NSP13-" + str(int((i - 16236) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # Helicase
-    elif (18039<=i<19620):
-        return "NSP14-" + str(int((i - 18039) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # 3' - 5' exonuclease
-    elif (19620<=i<20658):
-        return "NSP15-" + str(int((i - 19620) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # endoRNAse
-    elif (20658<=i<21552):
-        return "NSP16-" + str(int((i - 20658) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-            # 2'-O-ribose methyltransferase
-    elif (21562<=i<25384):
-        return "S-"     + str(int((i - 21562) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (28273<=i<29533):
-        return "N-"     + str(int((i - 28273) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (29557<=i<29674):
-        return "ORF10-" + str(int((i - 29557) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (26522<=i<27191):
-        return "M-"     + str(int((i - 26522) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    elif (27893<=i<28259):
-        return "ORF8-"  + str(int((i - 27893) / 3) + 1)  + '-' + frame_shift + '-' + i_residue
-    else:
-        return "NC-"    + str(int(i))
-
-    
-def get_label2(i):
-    return get_label(i[:-2]) + '-' + i[-1]
 
 
 def main(args):
@@ -148,6 +36,7 @@ def main(args):
     parser.add_argument('--record',  type=int,    default=1,                       help='number of generations between samples')
     parser.add_argument('--timed',   type=int,    default=0,                       help='if 0, wont print any time information, if 1 will print some information')
     parser.add_argument('--regPCT',  type=float,  default=None,                    help='the percent of regions to randomly use for inference')
+    parser.add_argument('--timePCT', type=float,  default=None,                    help='the percent of total time (summed over regions) to randomly use for inference')
     parser.add_argument('--refFile', type=str,    default='ref-index.csv',         help='the file containing the site indices and reference sequence')
     parser.add_argument('--trajectory',     action='store_true',  default=False,  help='whether or not to save the trajectories in the different regions')
     parser.add_argument('--eliminateNC',    action='store_true',  default=False,  help='whether or not to eliminate non-coding sites')
@@ -237,18 +126,47 @@ def main(args):
         print(region)
     
     # picking the regions to subsample randomly
-    if arg_list.regPCT:
-        alleles = mutant_sites_full
-        
-        reg_fraction = arg_list.regPCT / 100
-        regs_unique  = np.unique(regions_full)
+    def mask_fun(x, idxs):
+        """returns only the elements of x with index in idxs"""
+        return [x[i] for i in idxs]
+    
+    if arg_list.regPCT or arg_list.timePCT:
+ 
+        regs_short  = [dp.find_location(i) for i in regions_full]
+        regs_unique = np.unique(regs_short)
+        alleles     = mutant_sites_full
+        rng         = np.random.default_rng()
+
+        # subsample number of regions
+        if arg_list.regPCT:
+            reg_fraction = arg_list.regPCT / 100
+        #regs_unique  = np.unique(regions_full)
         #num_regs    = int(len(locations) * pct)
         #reg_idxs    = np.random.choice(np.arange(len(regs_unique)), num_regs, replace=False)
-        regs_chosen = regs_unique[np.random.choice(np.arange(len(regs_unique)), int(len(regs_unique) * reg_fraction), replace=False)]
-        reg_idxs    = [i for i in range(len(regions_full)) if regions_full[i] in regs_chosen]
+            regs_chosen = regs_unique[np.random.choice(np.arange(len(regs_unique)), int(len(regs_unique) * reg_fraction), replace=False)]
+            reg_idxs    = [i for i in range(len(regions_short)) if regions_short[i] in regs_chosen]
+        # Subsample as a percent of total time in all regions
+        elif arg_list.timePCT:
+            time_to_use = (arg_list.timePCT / 100) * np.sum([len(i) for i in dates]) # the amount of time to include in the analysis
+            total_time  = 0
+            regs_chosen = []
+            # add regions until the total time surpasses time_to_use
+            while total_time <= time_to_use:
+                regs_unused = [i for i in regs_unique if i not in regs_chosen]
+                reg_idx     = rng.choice(len(regs_unused), 1)[0]
+                reg         = regs_unused[reg_idx]
+                regs_chosen.append(reg)
+                for i in range(len(regs_short)):
+                    if regs_short[i]==reg:
+                        total_time += len(dates[i])
+            reg_idxs = [i for i in range(len(regs_short)) if regs_short[i] in regs_chosen]
+
+        
+        def mask_func(x):
+            return mask_fun(x, reg_idxs)
         
         # mask data based on regions
-        mask_func  = lambda x: list(np.array(x)[np.array(reg_idxs)])    # function for masking arrays
+        #mask_func  = lambda x: list(np.array(x)[np.array(reg_idxs)])    # function for masking arrays
         alleles    = mask_func(alleles)
         ref_sites  = mask_func(ref_sites)
         dates      = mask_func(dates)
@@ -432,7 +350,7 @@ def main(args):
         print2(f'combining all of the covariances and delta x terms for all of the locations took {t_solve_system - t_pre_combine} seconds')
     
     if arg_list.eliminateNC:
-        prots = [get_label(i).split('-')[0] for i in allele_number]
+        prots = [dp.get_label(i).split('-')[0] for i in allele_number]
         mask  = []
         for i in range(len(prots)):
             if prots[i]!='NC':
@@ -525,21 +443,21 @@ def main(args):
         g, 
         error_bars=error_bars, 
         selection=selection, 
-        traj=traj_full,   
-        mutant_sites=mutant_sites_tot, 
+        #traj=traj_full,   
+        #mutant_sites=mutant_sites_tot, 
         allele_number=allele_number, 
         locations=locations, 
-        times=dates, 
+        #times=dates, 
         selection_independent=selection_nocovar, 
         covar_int=A, 
-        inflow_tot=inflow_full, 
-        times_full=dates_full,
+        #inflow_tot=inflow_full, 
+        #times_full=dates_full,
         numerator=b
     )
     g.close()
         
     # write the covariance to a csv
-    cov_out = open(out_str + 'covar.csv', 'w')
+    cov_out = open(out_str + '-covar.csv', 'w')
     header = ','.join(allele_number)
     cov_out.write(f'{header}\n')
     for line in A:
